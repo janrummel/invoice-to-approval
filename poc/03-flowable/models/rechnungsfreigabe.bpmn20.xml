@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xmlns:flowable="http://flowable.org/bpmn"
+             targetNamespace="http://example.org/rechnungsfreigabe">
+
+  <process id="rechnungsfreigabe" name="Rechnungsfreigabe" isExecutable="true">
+
+    <startEvent id="start" name="Rechnung aus Pipeline"/>
+
+    <!-- DMN-Entscheidungstabelle ermittelt die Freigabestufe -->
+    <serviceTask id="ermittleStufe" name="Freigabestufe ermitteln (DMN)"
+                 flowable:type="dmn">
+      <extensionElements>
+        <flowable:field name="decisionTableReferenceKey">
+          <flowable:string><![CDATA[freigabestufe]]></flowable:string>
+        </flowable:field>
+        <flowable:field name="decisionTaskThrowErrorOnNoHits">
+          <flowable:string><![CDATA[true]]></flowable:string>
+        </flowable:field>
+      </extensionElements>
+    </serviceTask>
+
+    <exclusiveGateway id="gwStufe" name="Freigabestufe?"/>
+
+    <!-- Pfad 1: Dunkelbuchung -->
+    <serviceTask id="buchen" name="Dunkelbuchung ausloesen"
+                 flowable:expression="${execution.setVariable('gebucht', true)}"/>
+
+    <!-- Pfad 2: Human-in-the-Loop, Zustaendigkeit aus DMN-Ergebnis -->
+    <userTask id="pruefen" name="Rechnung pruefen und freigeben"
+              flowable:candidateGroups="${stufe == 'TEAMLEITUNG' ? 'teamleitung' : 'sachbearbeiter'}">
+      <documentation>Belege und Pipeline-Befunde pruefen; Variable 'freigegeben'
+      (true/false) und 'kommentar' setzen.</documentation>
+    </userTask>
+
+    <exclusiveGateway id="gwEntscheid" name="freigegeben?"/>
+
+    <endEvent id="endGebucht" name="Gebucht"/>
+    <endEvent id="endAbgelehnt" name="Abgelehnt"/>
+
+    <sequenceFlow id="f1" sourceRef="start" targetRef="ermittleStufe"/>
+    <sequenceFlow id="f2" sourceRef="ermittleStufe" targetRef="gwStufe"/>
+    <sequenceFlow id="f3" sourceRef="gwStufe" targetRef="endAbgelehnt">
+      <conditionExpression xsi:type="tFormalExpression">${stufe == 'ABGELEHNT'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="f4" sourceRef="gwStufe" targetRef="buchen">
+      <conditionExpression xsi:type="tFormalExpression">${stufe == 'AUTO'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="f5" sourceRef="gwStufe" targetRef="pruefen">
+      <conditionExpression xsi:type="tFormalExpression">${stufe == 'SACHBEARBEITER' || stufe == 'TEAMLEITUNG'}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="f6" sourceRef="buchen" targetRef="endGebucht"/>
+    <sequenceFlow id="f7" sourceRef="pruefen" targetRef="gwEntscheid"/>
+    <sequenceFlow id="f8" sourceRef="gwEntscheid" targetRef="buchen">
+      <conditionExpression xsi:type="tFormalExpression">${freigegeben}</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="f9" sourceRef="gwEntscheid" targetRef="endAbgelehnt">
+      <conditionExpression xsi:type="tFormalExpression">${!freigegeben}</conditionExpression>
+    </sequenceFlow>
+  </process>
+</definitions>

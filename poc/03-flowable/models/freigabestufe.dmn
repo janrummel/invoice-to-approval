@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             id="def_freigabestufe"
+             name="Freigabestufe Rechnungseingang"
+             namespace="http://flowable.org/dmn">
+  <!-- Risk-tiered autonomy als DMN-Entscheidungstabelle (Hit Policy FIRST):
+       Die Regeln sind fachlich lesbar und vom Fachbereich pflegbar — genau das
+       Argument fuer DMN gegenueber im Code versteckter Freigabelogik. -->
+  <decision id="freigabestufe" name="Freigabestufe">
+    <decisionTable id="dt_freigabestufe" hitPolicy="FIRST">
+      <input id="in_route" label="Pipeline-Route">
+        <inputExpression id="ie_route" typeRef="string"><text>route</text></inputExpression>
+      </input>
+      <input id="in_risk" label="Risk Score">
+        <inputExpression id="ie_risk" typeRef="number"><text>riskScore</text></inputExpression>
+      </input>
+      <input id="in_brutto" label="Bruttobetrag EUR">
+        <inputExpression id="ie_brutto" typeRef="number"><text>brutto</text></inputExpression>
+      </input>
+      <output id="out_stufe" label="Freigabestufe" name="stufe" typeRef="string"/>
+
+      <rule>
+        <description>Pipeline hat abgewiesen (z.B. Dublette) — keine Freigabe</description>
+        <inputEntry id="r1i1"><text>== "REJECT"</text></inputEntry>
+        <inputEntry id="r1i2"><text>-</text></inputEntry>
+        <inputEntry id="r1i3"><text>-</text></inputEntry>
+        <outputEntry id="r1o1"><text>"ABGELEHNT"</text></outputEntry>
+      </rule>
+      <rule>
+        <description>Hohes Risiko schlaegt Route — auch ein AUTO_POST mit risk >= 50 geht zur Teamleitung (Sicherheitsnetz, Hit Policy FIRST)</description>
+        <inputEntry id="r3i1"><text>-</text></inputEntry>
+        <inputEntry id="r3i2"><text>&gt;= 50</text></inputEntry>
+        <inputEntry id="r3i3"><text>-</text></inputEntry>
+        <outputEntry id="r3o1"><text>"TEAMLEITUNG"</text></outputEntry>
+      </rule>
+      <rule>
+        <description>Alle Pruefungen bestanden — Dunkelbuchung ohne Menschen</description>
+        <inputEntry id="r2i1"><text>== "AUTO_POST"</text></inputEntry>
+        <inputEntry id="r2i2"><text>-</text></inputEntry>
+        <inputEntry id="r2i3"><text>-</text></inputEntry>
+        <outputEntry id="r2o1"><text>"AUTO"</text></outputEntry>
+      </rule>
+      <rule>
+        <description>Grossbetrag ueber Dunkelbuchungsgrenze — Teamleitung</description>
+        <inputEntry id="r4i1"><text>-</text></inputEntry>
+        <inputEntry id="r4i2"><text>-</text></inputEntry>
+        <inputEntry id="r4i3"><text>&gt; 10000</text></inputEntry>
+        <outputEntry id="r4o1"><text>"TEAMLEITUNG"</text></outputEntry>
+      </rule>
+      <rule>
+        <description>Standard-Review — Sachbearbeitung genuegt</description>
+        <inputEntry id="r5i1"><text>-</text></inputEntry>
+        <inputEntry id="r5i2"><text>-</text></inputEntry>
+        <inputEntry id="r5i3"><text>-</text></inputEntry>
+        <outputEntry id="r5o1"><text>"SACHBEARBEITER"</text></outputEntry>
+      </rule>
+    </decisionTable>
+  </decision>
+</definitions>

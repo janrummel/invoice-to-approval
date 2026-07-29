@@ -1,0 +1,7 @@
+{
+  "PO-4711": { "vendor_vat_id": "DE136695976", "net_amount": "600.00",   "goods_received": true },
+  "PO-4720": { "vendor_vat_id": "DE811907980", "net_amount": "650.00",   "goods_received": true },
+  "PO-4733": { "vendor_vat_id": "DE129273398", "net_amount": "1200.00",  "goods_received": true },
+  "PO-4750": { "vendor_vat_id": "DE111111125", "net_amount": "21000.00", "goods_received": true },
+  "PO-4761": { "vendor_vat_id": "DE136695976", "net_amount": "500.00",   "goods_received": true }
+}

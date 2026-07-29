@@ -1,0 +1,100 @@
+[
+  {
+    "invoice_number": "RE-2026-0815",
+    "source_file": "s1_xrechnung_ubl_ok.xml",
+    "total_gross": "714.00",
+    "currency": "EUR",
+    "route": "AUTO_POST",
+    "risk_score": 0,
+    "reasons": [
+      "Alle Prüfungen bestanden — Dunkelbuchung"
+    ],
+    "findings": []
+  },
+  {
+    "invoice_number": "BL-77113",
+    "source_file": "s2_xrechnung_cii_summenfehler.xml",
+    "total_gross": "773.50",
+    "currency": "EUR",
+    "route": "REVIEW",
+    "risk_score": 40,
+    "reasons": [
+      "Validierungsfehler V01: Positionssumme 600.00 != Nettosumme 650.00"
+    ],
+    "findings": [
+      {
+        "code": "V01",
+        "severity": "error",
+        "message": "Positionssumme 600.00 != Nettosumme 650.00"
+      }
+    ]
+  },
+  {
+    "invoice_number": "GIT-2026-442",
+    "source_file": "s3_zugferd_iban_geaendert.pdf",
+    "total_gross": "1428.00",
+    "currency": "EUR",
+    "route": "REVIEW",
+    "risk_score": 50,
+    "reasons": [
+      "Bankverbindung weicht von Stammdaten ab (DE75512108001245126199 -> DE02120300000000202051) — Fraud-Check!"
+    ],
+    "findings": []
+  },
+  {
+    "invoice_number": "DA-10077",
+    "source_file": "s4_xrechnung_ubl_grossbetrag.xml",
+    "total_gross": "24990.00",
+    "currency": "EUR",
+    "route": "REVIEW",
+    "risk_score": 20,
+    "reasons": [
+      "Brutto 24990.00 EUR über Dunkelbuchungsgrenze 10000 EUR — Freigabe erforderlich"
+    ],
+    "findings": []
+  },
+  {
+    "invoice_number": "RE-2026-0815",
+    "source_file": "s5_xrechnung_ubl_dublette.xml",
+    "total_gross": "714.00",
+    "currency": "EUR",
+    "route": "REJECT",
+    "risk_score": 100,
+    "reasons": [
+      "Dublette: Rechnung RE-2026-0815 von Alpha Buero GmbH bereits verarbeitet"
+    ],
+    "findings": []
+  },
+  {
+    "invoice_number": "OC-889",
+    "source_file": "s6_scan_ohne_xml.pdf",
+    "total_gross": "106.98",
+    "currency": "EUR",
+    "route": "REVIEW",
+    "risk_score": 75,
+    "reasons": [
+      "Neuer Lieferant 'Omega Catering Service' — Stammdatenprüfung erforderlich",
+      "Extraktions-Confidence 60% unter Schwellwert 90% — manuelle Prüfung der extrahierten Felder",
+      "Kein Bestellbezug — Dunkelbuchung nur mit erfolgreichem 3-Way-Match möglich"
+    ],
+    "findings": [
+      {
+        "code": "V05",
+        "severity": "warning",
+        "message": "Keine USt-ID des Lieferanten vorhanden"
+      }
+    ]
+  },
+  {
+    "invoice_number": "RE-2026-0900",
+    "source_file": "s7_xrechnung_ubl_po_abweichung.xml",
+    "total_gross": "714.00",
+    "currency": "EUR",
+    "route": "REVIEW",
+    "risk_score": 30,
+    "reasons": [
+      "Netto 600.00 über Bestellwert 500.00 zzgl. 2% Toleranz — Preis-/Mengenabweichung klären"
+    ],
+    "findings": []
+  }
+]

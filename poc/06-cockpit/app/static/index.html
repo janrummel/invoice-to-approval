@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Freigabe-Cockpit — Invoice-to-Approval</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232a78d6'/%3E%3Cpath d='M4 8.5l2.5 2.5L12 5.5' stroke='%23fff' stroke-width='2' fill='none'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div class="shell">
+  <nav class="sidebar" aria-label="Hauptnavigation">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">◳</span>
+      <span class="brand-name">Freigabe-Cockpit</span>
+    </div>
+    <a href="#/posteingang" data-view="posteingang" class="nav-item">
+      <span aria-hidden="true">▤</span>Posteingang <span class="nav-badge" id="badge-queue" hidden></span>
+    </a>
+    <a href="#/freigaben" data-view="freigaben" class="nav-item">
+      <span aria-hidden="true">✓</span>Freigaben
+    </a>
+    <a href="#/auswertung" data-view="auswertung" class="nav-item">
+      <span aria-hidden="true">▥</span>Auswertung
+    </a>
+    <a href="#/audit" data-view="audit" class="nav-item">
+      <span aria-hidden="true">≡</span>Audit
+    </a>
+    <div class="sidebar-foot">
+      <span class="mono">POC 06 · Stufe B</span>
+    </div>
+  </nav>
+
+  <div class="content">
+    <header class="topbar">
+      <h1 id="view-title">Posteingang</h1>
+      <span class="env-badge">Demo — synthetische Belege</span>
+      <span class="spacer"></span>
+      <span class="engine-dot" id="engine-dot" title="Engine-Status"></span>
+      <button class="icon-btn" id="theme-toggle" title="Theme wechseln (Light/Dark)"
+              aria-label="Theme wechseln">◐</button>
+    </header>
+
+    <main id="main" tabindex="-1"></main>
+  </div>
+</div>
+
+<div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true"
+       aria-labelledby="drawer-title" hidden></aside>
+
+<div class="toast-wrap" id="toast-wrap" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
