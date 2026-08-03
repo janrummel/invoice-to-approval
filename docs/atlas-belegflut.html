@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>belegflut.py — das Abnahme-Szenario</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --surface: #fcfcfb; --card: #ffffff; --line: #e4e3df;
+    --ink: #1b1b1a; --ink-2: #52514e; --ink-3: #8a897f; --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --surface: #1a1a19; --card: #232322; --line: #3a3936;
+             --ink: #f2f1ec; --ink-2: #c3c2b7; --ink-3: #8a897f; --accent: #3987e5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--ink);
+         font: 16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .topnav { position: sticky; top: 0; z-index: 10; background: var(--surface);
+    border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .topnav .inner { max-width: 1220px; margin: 0 auto; padding: 9px 24px;
+    display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: center; }
+  .topnav .brand { font-weight: 650; color: var(--ink); margin-right: 10px; }
+  .topnav a { color: var(--ink-2); text-decoration: none; padding: 2px 9px;
+    border-radius: 999px; }
+  .topnav a:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); }
+  .topnav a.active { color: var(--accent); font-weight: 650;
+    background: color-mix(in oklab, var(--accent) 12%, transparent); }
+  .topnav .sep { color: var(--ink-3); }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 10px; }
+  h2 { font-size: 21px; margin: 2.2em 0 .6em; padding-top: .6em;
+        border-top: 1px solid var(--line); }
+  h1 + p, h2 + p { margin-top: 0; }
+  strong { font-weight: 650; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
+  a { color: var(--accent); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em;
+         background: color-mix(in oklab, var(--ink) 7%, transparent);
+         padding: 1px 5px; border-radius: 5px; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14.5px; }
+  th { text-align: left; color: var(--ink-3); font-weight: 550; font-size: 12.5px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  pre.mermaid { background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px; text-align: center; overflow-x: auto; }
+  pre.mermaid svg { max-width: none; } /* nicht herunterskalieren — Schrift bleibt lesbar */
+  /* Syntax-Highlighting (Pygments) — hell/dunkel getrennt */
+  pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #ffffcc }
+.codehilite { background: #f8f8f8; }
+.codehilite .c { color: #3D7B7B; font-style: italic } /* Comment */
+.codehilite .err { border: 1px solid #F00 } /* Error */
+.codehilite .k { color: #008000; font-weight: bold } /* Keyword */
+.codehilite .o { color: #666 } /* Operator */
+.codehilite .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.codehilite .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.codehilite .cp { color: #9C6500 } /* Comment.Preproc */
+.codehilite .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.codehilite .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.codehilite .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.codehilite .gd { color: #A00000 } /* Generic.Deleted */
+.codehilite .ge { font-style: italic } /* Generic.Emph */
+.codehilite .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #E40000 } /* Generic.Error */
+.codehilite .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.codehilite .gi { color: #008400 } /* Generic.Inserted */
+.codehilite .go { color: #717171 } /* Generic.Output */
+.codehilite .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.codehilite .gt { color: #04D } /* Generic.Traceback */
+.codehilite .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.codehilite .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.codehilite .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.codehilite .kp { color: #008000 } /* Keyword.Pseudo */
+.codehilite .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.codehilite .kt { color: #B00040 } /* Keyword.Type */
+.codehilite .m { color: #666 } /* Literal.Number */
+.codehilite .s { color: #BA2121 } /* Literal.String */
+.codehilite .na { color: #687822 } /* Name.Attribute */
+.codehilite .nb { color: #008000 } /* Name.Builtin */
+.codehilite .nc { color: #00F; font-weight: bold } /* Name.Class */
+.codehilite .no { color: #800 } /* Name.Constant */
+.codehilite .nd { color: #A2F } /* Name.Decorator */
+.codehilite .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.codehilite .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.codehilite .nf { color: #00F } /* Name.Function */
+.codehilite .nl { color: #767600 } /* Name.Label */
+.codehilite .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.codehilite .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.codehilite .nv { color: #19177C } /* Name.Variable */
+.codehilite .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.codehilite .w { color: #BBB } /* Text.Whitespace */
+.codehilite .mb { color: #666 } /* Literal.Number.Bin */
+.codehilite .mf { color: #666 } /* Literal.Number.Float */
+.codehilite .mh { color: #666 } /* Literal.Number.Hex */
+.codehilite .mi { color: #666 } /* Literal.Number.Integer */
+.codehilite .mo { color: #666 } /* Literal.Number.Oct */
+.codehilite .sa { color: #BA2121 } /* Literal.String.Affix */
+.codehilite .sb { color: #BA2121 } /* Literal.String.Backtick */
+.codehilite .sc { color: #BA2121 } /* Literal.String.Char */
+.codehilite .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.codehilite .s2 { color: #BA2121 } /* Literal.String.Double */
+.codehilite .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.codehilite .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.codehilite .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.codehilite .sx { color: #008000 } /* Literal.String.Other */
+.codehilite .sr { color: #A45A77 } /* Literal.String.Regex */
+.codehilite .s1 { color: #BA2121 } /* Literal.String.Single */
+.codehilite .ss { color: #19177C } /* Literal.String.Symbol */
+.codehilite .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #00F } /* Name.Function.Magic */
+.codehilite .vc { color: #19177C } /* Name.Variable.Class */
+.codehilite .vg { color: #19177C } /* Name.Variable.Global */
+.codehilite .vi { color: #19177C } /* Name.Variable.Instance */
+.codehilite .vm { color: #19177C } /* Name.Variable.Magic */
+.codehilite .il { color: #666 } /* Literal.Number.Integer.Long */
+  @media (prefers-color-scheme: dark) { pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #49483e }
+.codehilite { background: #272822; color: #F8F8F2 }
+.codehilite .c { color: #959077 } /* Comment */
+.codehilite .err { color: #ED007E; background-color: #1E0010 } /* Error */
+.codehilite .esc { color: #F8F8F2 } /* Escape */
+.codehilite .g { color: #F8F8F2 } /* Generic */
+.codehilite .k { color: #66D9EF } /* Keyword */
+.codehilite .l { color: #AE81FF } /* Literal */
+.codehilite .n { color: #F8F8F2 } /* Name */
+.codehilite .o { color: #FF4689 } /* Operator */
+.codehilite .x { color: #F8F8F2 } /* Other */
+.codehilite .p { color: #F8F8F2 } /* Punctuation */
+.codehilite .ch { color: #959077 } /* Comment.Hashbang */
+.codehilite .cm { color: #959077 } /* Comment.Multiline */
+.codehilite .cp { color: #959077 } /* Comment.Preproc */
+.codehilite .cpf { color: #959077 } /* Comment.PreprocFile */
+.codehilite .c1 { color: #959077 } /* Comment.Single */
+.codehilite .cs { color: #959077 } /* Comment.Special */
+.codehilite .gd { color: #FF4689 } /* Generic.Deleted */
+.codehilite .ge { color: #F8F8F2; font-style: italic } /* Generic.Emph */
+.codehilite .ges { color: #F8F8F2; font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #F8F8F2 } /* Generic.Error */
+.codehilite .gh { color: #F8F8F2 } /* Generic.Heading */
+.codehilite .gi { color: #A6E22E } /* Generic.Inserted */
+.codehilite .go { color: #66D9EF } /* Generic.Output */
+.codehilite .gp { color: #FF4689; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { color: #F8F8F2; font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #959077 } /* Generic.Subheading */
+.codehilite .gt { color: #F8F8F2 } /* Generic.Traceback */
+.codehilite .kc { color: #66D9EF } /* Keyword.Constant */
+.codehilite .kd { color: #66D9EF } /* Keyword.Declaration */
+.codehilite .kn { color: #FF4689 } /* Keyword.Namespace */
+.codehilite .kp { color: #66D9EF } /* Keyword.Pseudo */
+.codehilite .kr { color: #66D9EF } /* Keyword.Reserved */
+.codehilite .kt { color: #66D9EF } /* Keyword.Type */
+.codehilite .ld { color: #E6DB74 } /* Literal.Date */
+.codehilite .m { color: #AE81FF } /* Literal.Number */
+.codehilite .s { color: #E6DB74 } /* Literal.String */
+.codehilite .na { color: #A6E22E } /* Name.Attribute */
+.codehilite .nb { color: #F8F8F2 } /* Name.Builtin */
+.codehilite .nc { color: #A6E22E } /* Name.Class */
+.codehilite .no { color: #66D9EF } /* Name.Constant */
+.codehilite .nd { color: #A6E22E } /* Name.Decorator */
+.codehilite .ni { color: #F8F8F2 } /* Name.Entity */
+.codehilite .ne { color: #A6E22E } /* Name.Exception */
+.codehilite .nf { color: #A6E22E } /* Name.Function */
+.codehilite .nl { color: #F8F8F2 } /* Name.Label */
+.codehilite .nn { color: #F8F8F2 } /* Name.Namespace */
+.codehilite .nx { color: #A6E22E } /* Name.Other */
+.codehilite .py { color: #F8F8F2 } /* Name.Property */
+.codehilite .nt { color: #FF4689 } /* Name.Tag */
+.codehilite .nv { color: #F8F8F2 } /* Name.Variable */
+.codehilite .ow { color: #FF4689 } /* Operator.Word */
+.codehilite .pm { color: #F8F8F2 } /* Punctuation.Marker */
+.codehilite .w { color: #F8F8F2 } /* Text.Whitespace */
+.codehilite .mb { color: #AE81FF } /* Literal.Number.Bin */
+.codehilite .mf { color: #AE81FF } /* Literal.Number.Float */
+.codehilite .mh { color: #AE81FF } /* Literal.Number.Hex */
+.codehilite .mi { color: #AE81FF } /* Literal.Number.Integer */
+.codehilite .mo { color: #AE81FF } /* Literal.Number.Oct */
+.codehilite .sa { color: #E6DB74 } /* Literal.String.Affix */
+.codehilite .sb { color: #E6DB74 } /* Literal.String.Backtick */
+.codehilite .sc { color: #E6DB74 } /* Literal.String.Char */
+.codehilite .dl { color: #E6DB74 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #E6DB74 } /* Literal.String.Doc */
+.codehilite .s2 { color: #E6DB74 } /* Literal.String.Double */
+.codehilite .se { color: #AE81FF } /* Literal.String.Escape */
+.codehilite .sh { color: #E6DB74 } /* Literal.String.Heredoc */
+.codehilite .si { color: #E6DB74 } /* Literal.String.Interpol */
+.codehilite .sx { color: #E6DB74 } /* Literal.String.Other */
+.codehilite .sr { color: #E6DB74 } /* Literal.String.Regex */
+.codehilite .s1 { color: #E6DB74 } /* Literal.String.Single */
+.codehilite .ss { color: #E6DB74 } /* Literal.String.Symbol */
+.codehilite .bp { color: #F8F8F2 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #A6E22E } /* Name.Function.Magic */
+.codehilite .vc { color: #F8F8F2 } /* Name.Variable.Class */
+.codehilite .vg { color: #F8F8F2 } /* Name.Variable.Global */
+.codehilite .vi { color: #F8F8F2 } /* Name.Variable.Instance */
+.codehilite .vm { color: #F8F8F2 } /* Name.Variable.Magic */
+.codehilite .il { color: #AE81FF } /* Literal.Number.Integer.Long */ }
+  .codehilite { border: 1px solid var(--line); border-radius: 10px;
+    overflow-x: auto; margin: 0 0 8px; }
+  .codehilite pre { margin: 0; padding: 12px 16px;
+    font: 13px/1.55 ui-monospace, "SF Mono", Menlo, monospace; }
+  .codehilite code { background: transparent; padding: 0; } /* Inline-code-Stil neutralisieren */
+  /* Farb-Labels: verbinden Code-Abschnitte mit den Diagramm-Blöcken */
+  .codeblock-label { display: inline-block; font-size: 12.5px; font-weight: 600;
+    padding: 3px 12px; margin: 16px 0 0; border-radius: 8px 8px 0 0;
+    background: color-mix(in oklab, var(--ink) 6%, transparent);
+    color: var(--ink-2); border-left: 4px solid var(--ink-3); }
+  .codeblock-label + .codehilite { border-top-left-radius: 0; }
+  .codeblock-label[data-tone="blau"] { border-left-color: #2a78d6; }
+  .codeblock-label[data-tone="rot"] { border-left-color: #d03b3b; }
+  .codeblock-label[data-tone="gelb"] { border-left-color: #fab219; }
+  .codeblock-label[data-tone="gruen"] { border-left-color: #0ca30c; }
+  .codeblock-label[data-tone="blau"] + .codehilite { border-left: 4px solid #2a78d6; }
+  .codeblock-label[data-tone="rot"] + .codehilite { border-left: 4px solid #d03b3b; }
+  .codeblock-label[data-tone="gelb"] + .codehilite { border-left: 4px solid #fab219; }
+  .codeblock-label[data-tone="gruen"] + .codehilite { border-left: 4px solid #0ca30c; }
+  /* Zweispaltige Code-Ansicht: Code links, Erklärnotizen rechts daneben.
+     Bricht aus der Textspalte aus (breiter als main), damit der Code Platz hat. */
+  .code-row { display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 0 20px; align-items: start; margin: 16px 0 8px;
+    width: min(1220px, calc(100vw - 48px));
+    position: relative; left: 50%; transform: translateX(-50%); }
+  .code-row .codeblock-label { margin-top: 0; }
+  .code-notes { font-size: 13.5px; color: var(--ink-2); line-height: 1.55;
+    padding: 30px 0 0 14px; border-left: 1px solid var(--line); }
+  .code-notes ul { margin: 0; padding-left: 16px; }
+  .code-notes li { margin: 0 0 9px; }
+  .code-notes code { font-size: .85em; }
+  @media (max-width: 1000px) {
+    .code-row { grid-template-columns: 1fr; width: auto; left: 0; transform: none; }
+    .code-notes { padding: 6px 0 0; border-left: 0; }
+  }
+  details { background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 16px; margin: 10px 0; }
+  details summary { cursor: pointer; font-weight: 550; }
+  details[open] summary { margin-bottom: 6px; color: var(--accent); }
+  blockquote { border-left: 3px solid var(--accent); margin: 1em 0;
+    padding: 2px 0 2px 14px; color: var(--ink-2); }
+  li { margin: .25em 0; }
+  @media print {
+    body { background: #fff; color: #000; font-size: 12px; }
+    .topnav { display: none; }
+    .code-row { width: auto; left: 0; transform: none; }
+    details { break-inside: avoid; } details:not([open]) summary ~ * { display: block; }
+    pre.mermaid { break-inside: avoid; border: 1px solid #ccc; }
+    h2 { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<nav class="topnav"><div class="inner"><span class="brand">Invoice-to-Approval · Lernseiten</span><a href="poc-walkthrough.html">POC-Walkthrough</a><a href="skript-atlas.html">Skript-Atlas</a><span class="sep" aria-hidden="true">·</span><a href="atlas-parsers.html">parsers.py</a><a href="atlas-validation.html">validation.py</a><a href="atlas-routing.html">routing.py</a><a href="atlas-run.html">run.py</a><a href="atlas-belegflut.html" class="active">belegflut.py</a><a href="atlas-e2e-smoke.html">e2e_smoke.py</a></div></nav>
+<main>
+<h1>belegflut.py — das Abnahme-Szenario</h1>
+<p><strong>Zweck in einem Satz:</strong> Konstruiert 30 Belege mit <strong>vorher bekannter
+Soll-Verteilung</strong> (18 AUTO_POST, 4 REJECT, 8 REVIEW), schickt sie durch
+Validierung + Routing und vergleicht Ist gegen Soll — Exit-Code 0 nur bei
+exakter Übereinstimmung.</p>
+<p><strong>Einordnung:</strong> Kein Pipeline-Baustein, sondern ein <strong>Szenario-Test</strong> (siehe
+Test-Checkliste): Er prüft das Zusammenspiel der Regeln in der Masse, nicht
+einzelne Regeln (das tun die Unit-Tests). Gebaut als Szenario-Abnahme des
+Testfundaments; bleibt als wiederholbares Werkzeug im Repo.</p>
+<h2>Eingaben und Ausgaben</h2>
+<table>
+<thead>
+<tr>
+<th>Was</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Eingabe</td>
+<td>keine Dateien — die 30 Belege entstehen im Skript (konstruiert, je Gruppe mit genau einer bekannten Auffälligkeit); Stammdaten wie im echten Lauf</td>
+</tr>
+<tr>
+<td>Ausgabe</td>
+<td>30 Ergebniszeilen (Beleg, Route, Risk, ALLE Gründe) + Soll/Ist-Vergleich · Exit 0 = bestanden, Exit 1 = Abweichung</td>
+</tr>
+</tbody>
+</table>
+<h2>Ablauf</h2>
+<pre class="mermaid">flowchart TD
+    A["beleg(nr, **over)<br/>Fabrik: konsistenter Basis-Beleg,<br/>jedes Feld überschreibbar"] --> B["30 Belege mischen:<br/>18 sauber · 4 Dubletten · 3 IBAN-Fraud<br/>3 Großbetrag (konsistent!) · 2 ohne Bestellung"]
+    B --> C["je Beleg:<br/>validate → route<br/>Route zählen (Counter)"]
+    C --> D{"Ist == Soll?"}
+    D -->|ja| OK["BELEGFLUT OK · Exit 0"]
+    D -->|nein| FAIL["BELEGFLUT FAIL · Exit 1"]
+    classDef setup stroke:#2a78d6,stroke-width:2.5px
+    classDef arbeit stroke:#fab219,stroke-width:2.5px
+    classDef out stroke:#0ca30c,stroke-width:2.5px
+    classDef bad stroke:#d03b3b,stroke-width:2.5px
+    class A,B setup
+    class C arbeit
+    class D,OK out
+    class FAIL bad
+</pre>
+<p>Farben unten: <strong>Blau</strong> = Aufbau und Beleg-Konstruktion · <strong>Gelb</strong> = der Lauf ·
+<strong>Grün</strong> = Vergleich und Exit · <strong>Rot</strong> = der Fehlerpfad.</p>
+<h2>Variablen und Rahmenkriterien</h2>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Wert</th>
+<th>Warum so</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Soll-Verteilung</td>
+<td>18 / 4 / 8</td>
+<td>ergibt sich aus der Konstruktion — der Test weiß VORHER, was herauskommen muss; jede Abweichung ist ein Regelversagen</td>
+</tr>
+<tr>
+<td>Großbetrags-Belege</td>
+<td>in sich konsistent + durch PO-4750 gedeckt</td>
+<td>Lektion aus einem Abnahme-Lauf: Testdaten müssen die Geschichte erzählen, die sie behaupten — die erste Fassung testete versehentlich V03 mit</td>
+</tr>
+<tr>
+<td><code>TODAY</code></td>
+<td>2026-07-28</td>
+<td>derselbe fixierte Stichtag wie in run.py und den Tests</td>
+</tr>
+</tbody>
+</table>
+<h2>Der vollständige Code — geführt</h2>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Aufbau · uv-Metadaten, Docstring mit Soll, Importe über sys.path (Z. 1–32)</div>
+<div class="codehilite"><pre><span></span><code><span class="c1"># /// script</span>
+<span class="c1"># requires-python = &quot;&gt;=3.11&quot;</span>
+<span class="c1"># dependencies = [&quot;pydantic&gt;=2&quot;, &quot;python-stdnum&quot;]</span>
+<span class="c1"># ///</span>
+<span class="sd">&quot;&quot;&quot;Szenario &#39;Belegflut&#39; (Szenario-Abnahme): 30 konstruierte Belege mit bekannter</span>
+<span class="sd">Soll-Verteilung laufen durch Validierung + Routing.</span>
+
+<span class="sd">Soll: 18x AUTO_POST · 4x REJECT (Dubletten) · 8x REVIEW</span>
+<span class="sd">      (3 IBAN-Fraud, 3 Grossbetrag [in sich konsistent, PO-4750 gedeckt —</span>
+<span class="sd">      es feuert NUR die Betragsschwelle], 2 ohne Bestellbezug)</span>
+<span class="sd">Exit-Codes: 0 = Ist entspricht Soll · 1 = Abweichung.</span>
+<span class="sd">Aufruf:  uv run scripts/belegflut.py</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">decimal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Decimal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">REPO</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parents</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">REPO</span> <span class="o">/</span> <span class="s2">&quot;poc&quot;</span> <span class="o">/</span> <span class="s2">&quot;02-invoice-pipeline&quot;</span><span class="p">))</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pipeline.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Invoice</span><span class="p">,</span> <span class="n">LineItem</span><span class="p">,</span> <span class="n">Party</span><span class="p">,</span> <span class="n">Route</span><span class="p">,</span> <span class="n">SourceFormat</span><span class="p">,</span> <span class="n">TaxBreakdown</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pipeline.routing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Router</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pipeline.validation</span><span class="w"> </span><span class="kn">import</span> <span class="n">validate</span>
+
+<span class="n">TODAY</span> <span class="o">=</span> <span class="n">date</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">28</span><span class="p">)</span>
+<span class="n">MASTER</span> <span class="o">=</span> <span class="n">REPO</span> <span class="o">/</span> <span class="s2">&quot;poc&quot;</span> <span class="o">/</span> <span class="s2">&quot;02-invoice-pipeline&quot;</span> <span class="o">/</span> <span class="s2">&quot;masterdata&quot;</span> <span class="o">/</span> <span class="s2">&quot;vendors.json&quot;</span>
+<span class="n">VALID_IBAN</span> <span class="o">=</span> <span class="s2">&quot;DE89370400440532013000&quot;</span>
+<span class="n">ANDERE_IBAN</span> <span class="o">=</span> <span class="s2">&quot;DE02120300000000202051&quot;</span>
+<span class="n">VALID_VAT</span> <span class="o">=</span> <span class="s2">&quot;DE136695976&quot;</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code># /// script … ///</code>:</strong> Inline-Metadaten (PEP 723) — <code>uv run</code> liest
+  daraus die Abhängigkeiten und baut sich seine Umgebung selbst. Deshalb
+  läuft das Skript ohne Installation mit einem Befehl.</li>
+<li><strong>Der Docstring trägt das Soll:</strong> wer das Skript öffnet, weiß sofort, was
+  ein bestandener Lauf bedeutet — Testabsicht als Dokumentation.</li>
+<li><strong><code>sys.path.insert</code>:</strong> das Pipeline-Paket ist nicht installiert, sondern
+  liegt im POC-Ordner — derselbe pragmatische Kniff wie in
+  <code>tests/conftest.py</code>.</li>
+<li><strong><code>ANDERE_IBAN</code> ist eine GÜLTIGE IBAN</strong> — nur eben nicht die hinterlegte.
+  So testet der Fraud-Fall wirklich den Stammdaten-Abgleich, nicht die
+  V04-Prüfsumme.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Die Beleg-Fabrik · ein konsistenter Basis-Beleg, alles überschreibbar (Z. 35–48)</div>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">beleg</span><span class="p">(</span><span class="n">nr</span><span class="p">,</span> <span class="o">**</span><span class="n">over</span><span class="p">):</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">invoice_number</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;FLUT-</span><span class="si">{</span><span class="n">nr</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">issue_date</span><span class="o">=</span><span class="n">date</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+        <span class="n">currency</span><span class="o">=</span><span class="s2">&quot;EUR&quot;</span><span class="p">,</span>
+        <span class="n">seller</span><span class="o">=</span><span class="n">Party</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alpha Buero GmbH&quot;</span><span class="p">,</span> <span class="n">vat_id</span><span class="o">=</span><span class="n">VALID_VAT</span><span class="p">,</span> <span class="n">iban</span><span class="o">=</span><span class="n">VALID_IBAN</span><span class="p">),</span>
+        <span class="n">purchase_order_ref</span><span class="o">=</span><span class="s2">&quot;PO-4711&quot;</span><span class="p">,</span>
+        <span class="n">lines</span><span class="o">=</span><span class="p">[</span><span class="n">LineItem</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Ware&quot;</span><span class="p">,</span> <span class="n">quantity</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">),</span>
+                        <span class="n">unit_price</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;600&quot;</span><span class="p">),</span> <span class="n">net_amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;600.00&quot;</span><span class="p">))],</span>
+        <span class="n">taxes</span><span class="o">=</span><span class="p">[</span><span class="n">TaxBreakdown</span><span class="p">(</span><span class="n">rate</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;19&quot;</span><span class="p">),</span> <span class="n">base</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;600.00&quot;</span><span class="p">),</span>
+                            <span class="n">amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;114.00&quot;</span><span class="p">))],</span>
+        <span class="n">total_net</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;600.00&quot;</span><span class="p">),</span> <span class="n">total_tax</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;114.00&quot;</span><span class="p">),</span>
+        <span class="n">total_gross</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;714.00&quot;</span><span class="p">),</span> <span class="n">source_format</span><span class="o">=</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">UBL</span><span class="p">,</span>
+        <span class="n">source_file</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;flut_</span><span class="si">{</span><span class="n">nr</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">.xml&quot;</span><span class="p">)</span>
+    <span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">over</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Invoice</span><span class="p">(</span><span class="o">**</span><span class="n">base</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Das Fabrik-Muster</strong> (wie die <code>make_invoice</code>-Fixture der Tests): ein in
+  sich stimmiger Basis-Beleg (600 netto + 19 % = 714 brutto, gedeckt durch
+  PO-4711), und <code>**over</code> überschreibt gezielt einzelne Felder.</li>
+<li><strong>Warum das mächtig ist:</strong> jede Beleg-Gruppe unten unterscheidet sich vom
+  Basis-Beleg in GENAU EINER Eigenschaft — dadurch weiß man bei jeder
+  Abweichung sofort, welche Regel sie ausgelöst haben muss.</li>
+<li><strong><code>f"FLUT-{nr:03d}"</code>:</strong> Format-Angabe <code>03d</code> = dreistellig mit führenden
+  Nullen (FLUT-001 …).</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Die Mischung · fünf Gruppen mit bekannter Wirkung (Z. 51–77)</div>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
+    <span class="n">belege</span> <span class="o">=</span> <span class="p">[</span><span class="n">beleg</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">19</span><span class="p">)]</span>                        <span class="c1"># 18 sauber</span>
+    <span class="n">belege</span> <span class="o">+=</span> <span class="p">[</span><span class="n">beleg</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">invoice_number</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;FLUT-</span><span class="si">{</span><span class="n">i</span><span class="o">-</span><span class="mi">4</span><span class="si">:</span><span class="s2">03d</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>            <span class="c1"># 4 Dubletten</span>
+               <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">19</span><span class="p">,</span> <span class="mi">23</span><span class="p">)]</span>
+    <span class="n">belege</span> <span class="o">+=</span> <span class="p">[</span><span class="n">beleg</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">seller</span><span class="o">=</span><span class="n">Party</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alpha Buero GmbH&quot;</span><span class="p">,</span>       <span class="c1"># 3 IBAN-Fraud</span>
+                                     <span class="n">vat_id</span><span class="o">=</span><span class="n">VALID_VAT</span><span class="p">,</span> <span class="n">iban</span><span class="o">=</span><span class="n">ANDERE_IBAN</span><span class="p">))</span>
+               <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">26</span><span class="p">)]</span>
+    <span class="c1"># 3 Grossbetrag — in sich konsistent (21.000 netto + 19 % USt) und durch</span>
+    <span class="c1"># PO-4750 (Delta Anlagenbau, Wareneingang gebucht) gedeckt: es feuert</span>
+    <span class="c1"># ausschliesslich die Betragsschwelle (+20)</span>
+    <span class="n">belege</span> <span class="o">+=</span> <span class="p">[</span><span class="n">beleg</span><span class="p">(</span><span class="n">i</span><span class="p">,</span>
+                     <span class="n">seller</span><span class="o">=</span><span class="n">Party</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Delta Anlagenbau GmbH&quot;</span><span class="p">,</span>
+                                  <span class="n">vat_id</span><span class="o">=</span><span class="s2">&quot;DE111111125&quot;</span><span class="p">,</span>
+                                  <span class="n">iban</span><span class="o">=</span><span class="s2">&quot;DE27100777770209299700&quot;</span><span class="p">),</span>
+                     <span class="n">purchase_order_ref</span><span class="o">=</span><span class="s2">&quot;PO-4750&quot;</span><span class="p">,</span>
+                     <span class="n">lines</span><span class="o">=</span><span class="p">[</span><span class="n">LineItem</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s2">&quot;Anlage&quot;</span><span class="p">,</span>
+                                     <span class="n">quantity</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;1&quot;</span><span class="p">),</span>
+                                     <span class="n">unit_price</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;21000&quot;</span><span class="p">),</span>
+                                     <span class="n">net_amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;21000.00&quot;</span><span class="p">))],</span>
+                     <span class="n">taxes</span><span class="o">=</span><span class="p">[</span><span class="n">TaxBreakdown</span><span class="p">(</span><span class="n">rate</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;19&quot;</span><span class="p">),</span>
+                                         <span class="n">base</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;21000.00&quot;</span><span class="p">),</span>
+                                         <span class="n">amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;3990.00&quot;</span><span class="p">))],</span>
+                     <span class="n">total_net</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;21000.00&quot;</span><span class="p">),</span>
+                     <span class="n">total_tax</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;3990.00&quot;</span><span class="p">),</span>
+                     <span class="n">total_gross</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;24990.00&quot;</span><span class="p">))</span>
+               <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">26</span><span class="p">,</span> <span class="mi">29</span><span class="p">)]</span>
+    <span class="n">belege</span> <span class="o">+=</span> <span class="p">[</span><span class="n">beleg</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">purchase_order_ref</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>                    <span class="c1"># 2 ohne PO</span>
+               <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">29</span><span class="p">,</span> <span class="mi">31</span><span class="p">)]</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>invoice_number=f"FLUT-{i-4:03d}"</code>:</strong> Beleg 19 trägt die Nummer von
+  Beleg 15 — so entstehen die 4 Dubletten. Sie funktionieren nur, weil die
+  Originale VORHER durch den Router liefen (Reihenfolge!).</li>
+<li><strong>Der Großbetrags-Block ist der längste — mit Absicht:</strong> hier wird ALLES
+  konsistent überschrieben (Lieferant, Bestellung, Positionen, Steuern,
+  Summen), damit wirklich nur die Betragsschwelle feuert. Die erste Fassung
+  überschrieb nur <code>total_gross</code> und testete versehentlich V03 mit — eine
+  Abnahme-Frage deckte das auf.</li>
+<li><strong><code>range(1, 19)</code></strong> erzeugt 1–18 (das Ende ist exklusiv) — daher die
+  scheinbar "krummen" Grenzen.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Der Lauf · Validierung + Routing, Routen zählen (Z. 79–88)</div>
+<div class="codehilite"><pre><span></span><code>    <span class="n">router</span> <span class="o">=</span> <span class="n">Router</span><span class="p">(</span><span class="n">MASTER</span><span class="p">)</span>
+    <span class="n">ist</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">inv</span> <span class="ow">in</span> <span class="n">belege</span><span class="p">:</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">router</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="n">inv</span><span class="p">,</span> <span class="n">validate</span><span class="p">(</span><span class="n">inv</span><span class="p">,</span> <span class="n">TODAY</span><span class="p">))</span>
+        <span class="n">ist</span><span class="p">[</span><span class="n">d</span><span class="o">.</span><span class="n">route</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="c1"># ALLE Gründe ausgeben, nicht nur den ersten — sonst bleibt bei</span>
+        <span class="c1"># Mehrfach-Befunden Information verborgen (Lektion aus der Abnahme)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">source_file</span><span class="si">}</span><span class="s2">  </span><span class="si">{</span><span class="n">d</span><span class="o">.</span><span class="n">route</span><span class="o">.</span><span class="n">value</span><span class="si">:</span><span class="s2">9</span><span class="si">}</span><span class="s2">  Risk </span><span class="si">{</span><span class="n">d</span><span class="o">.</span><span class="n">risk_score</span><span class="si">:</span><span class="s2">3</span><span class="si">}</span><span class="s2">  &quot;</span>
+              <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39; | &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">reasons</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>Counter()</code></strong> (aus <code>collections</code>): ein Zähl-Dictionary — <code>ist[route] += 1</code>
+  funktioniert ohne Initialisierung.</li>
+<li><strong>Ein Router für alle 30:</strong> wie in <code>run.py</code> — nur so trägt das
+  Dubletten-Register über den Lauf.</li>
+<li><strong><code>' | '.join(d.reasons)</code>:</strong> die Zeile entstand aus einem Abnahme-Befund —
+  vorher zeigte <code>d.reasons[0]</code> nur den ersten Grund und
+  verdeckte bei flut_026 den zweiten.</li>
+<li><strong><code>:9</code> und <code>:3</code>:</strong> Feldbreiten — die Spalten stehen untereinander,
+  30 Zeilen bleiben überfliegbar.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gruen">Soll gegen Ist · harte Abnahme mit Exit-Code (Z. 90–101)</div>
+<div class="codehilite"><pre><span></span><code>    <span class="n">soll</span> <span class="o">=</span> <span class="p">{</span><span class="n">Route</span><span class="o">.</span><span class="n">AUTO_POST</span><span class="p">:</span> <span class="mi">18</span><span class="p">,</span> <span class="n">Route</span><span class="o">.</span><span class="n">REJECT</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span> <span class="n">Route</span><span class="o">.</span><span class="n">REVIEW</span><span class="p">:</span> <span class="mi">8</span><span class="p">}</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Soll: </span><span class="si">{</span><span class="nb">dict</span><span class="p">((</span><span class="n">k</span><span class="o">.</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">soll</span><span class="o">.</span><span class="n">items</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Ist:  </span><span class="si">{</span><span class="nb">dict</span><span class="p">((</span><span class="n">k</span><span class="o">.</span><span class="n">value</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="p">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">v</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">ist</span><span class="o">.</span><span class="n">items</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ist</span><span class="p">)</span> <span class="o">!=</span> <span class="n">soll</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;BELEGFLUT FAIL&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;BELEGFLUT OK&quot;</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>dict(ist) != soll</code>:</strong> exakter Vergleich der kompletten Verteilung —
+  eine einzige verrutschte Route lässt die Abnahme durchfallen. Der
+  Mutation-Beweis (Soll auf 17/5/8 verstellt → FAIL) hat gezeigt, dass der
+  Vergleich wirklich scharf ist.</li>
+<li><strong><code>sys.exit(1)</code> vs. <code>exit(0)</code>:</strong> der Exit-Code IST das Ergebnis — Skripte
+  und CI können den Lauf maschinell auswerten. Und: nie den Exit-Code durch
+  Pipes entschärfen (Feedback-Regel).</li>
+</ul>
+</aside>
+</div>
+<p><strong>Zum Nachschlagen:</strong> Datei <code>scripts/belegflut.py</code> · Test-Checkliste:
+<code>docs/test-checkliste.md</code> (Szenario-Test, Abschluss jeder Stufe).</p>
+<h2>Selbsttest</h2>
+<details>
+<summary>1. Warum weiß dieses Skript VORHER, was herauskommen muss — und warum ist das der Kern der Abnahme?</summary>
+<p>Weil jede Beleg-Gruppe konstruiert ist: Der Basis-Beleg ist sauber, jede
+Gruppe weicht in genau einer bekannten Eigenschaft ab. Die Soll-Verteilung
+folgt also aus den Regeln selbst. Stimmt Ist nicht mit Soll überein, hat
+sich eine Regel anders verhalten als verstanden — genau das soll eine
+Abnahme aufdecken.</p>
+</details>
+<details>
+<summary>2. Warum mussten die Großbetrags-Belege einen anderen Lieferanten und eine andere Bestellung bekommen?</summary>
+<p>Nur <code>total_gross</code> hochzusetzen machte den Beleg in sich inkonsistent (V03
+feuerte, +40) und riss den 3-Way-Match (Netto über PO-4711-Bestellwert).
+Damit NUR die Betragsschwelle (+20) feuert, muss alles zusammenpassen:
+konsistente Summen UND eine deckende Bestellung — die gab es in den
+Stammdaten nur bei Delta Anlagenbau (PO-4750, 21.000 netto).</p>
+</details>
+<details>
+<summary>3. Worin unterscheidet sich dieses Szenario von den 15 Unit-Tests in test_routing.py?</summary>
+<p>Die Unit-Tests prüfen jede Regel isoliert (ein Befund, ein erwarteter
+Punktwert). Das Szenario prüft die Masse und das Zusammenspiel: Reihenfolge
+(Dubletten brauchen ihre Originale), Verteilung, Regelinteraktion. Beide
+zusammen ergeben erst das Testfundament — Lücken des einen fängt das andere.</p>
+</details>
+</main>
+<script src="mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: "loose",  /* erlaubt click-Links in Diagrammen */
+    theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral",
+    themeVariables: { fontSize: "16px",
+      fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' },
+    flowchart: { htmlLabels: true, curve: "basis", useMaxWidth: false }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>parsers.py — Format-Erkennung und drei Parser-Wege (Schicht 1)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --surface: #fcfcfb; --card: #ffffff; --line: #e4e3df;
+    --ink: #1b1b1a; --ink-2: #52514e; --ink-3: #8a897f; --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --surface: #1a1a19; --card: #232322; --line: #3a3936;
+             --ink: #f2f1ec; --ink-2: #c3c2b7; --ink-3: #8a897f; --accent: #3987e5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--ink);
+         font: 16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .topnav { position: sticky; top: 0; z-index: 10; background: var(--surface);
+    border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .topnav .inner { max-width: 1220px; margin: 0 auto; padding: 9px 24px;
+    display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: center; }
+  .topnav .brand { font-weight: 650; color: var(--ink); margin-right: 10px; }
+  .topnav a { color: var(--ink-2); text-decoration: none; padding: 2px 9px;
+    border-radius: 999px; }
+  .topnav a:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); }
+  .topnav a.active { color: var(--accent); font-weight: 650;
+    background: color-mix(in oklab, var(--accent) 12%, transparent); }
+  .topnav .sep { color: var(--ink-3); }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 10px; }
+  h2 { font-size: 21px; margin: 2.2em 0 .6em; padding-top: .6em;
+        border-top: 1px solid var(--line); }
+  h1 + p, h2 + p { margin-top: 0; }
+  strong { font-weight: 650; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
+  a { color: var(--accent); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em;
+         background: color-mix(in oklab, var(--ink) 7%, transparent);
+         padding: 1px 5px; border-radius: 5px; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14.5px; }
+  th { text-align: left; color: var(--ink-3); font-weight: 550; font-size: 12.5px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  pre.mermaid { background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px; text-align: center; overflow-x: auto; }
+  pre.mermaid svg { max-width: none; } /* nicht herunterskalieren — Schrift bleibt lesbar */
+  /* Syntax-Highlighting (Pygments) — hell/dunkel getrennt */
+  pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #ffffcc }
+.codehilite { background: #f8f8f8; }
+.codehilite .c { color: #3D7B7B; font-style: italic } /* Comment */
+.codehilite .err { border: 1px solid #F00 } /* Error */
+.codehilite .k { color: #008000; font-weight: bold } /* Keyword */
+.codehilite .o { color: #666 } /* Operator */
+.codehilite .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.codehilite .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.codehilite .cp { color: #9C6500 } /* Comment.Preproc */
+.codehilite .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.codehilite .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.codehilite .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.codehilite .gd { color: #A00000 } /* Generic.Deleted */
+.codehilite .ge { font-style: italic } /* Generic.Emph */
+.codehilite .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #E40000 } /* Generic.Error */
+.codehilite .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.codehilite .gi { color: #008400 } /* Generic.Inserted */
+.codehilite .go { color: #717171 } /* Generic.Output */
+.codehilite .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.codehilite .gt { color: #04D } /* Generic.Traceback */
+.codehilite .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.codehilite .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.codehilite .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.codehilite .kp { color: #008000 } /* Keyword.Pseudo */
+.codehilite .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.codehilite .kt { color: #B00040 } /* Keyword.Type */
+.codehilite .m { color: #666 } /* Literal.Number */
+.codehilite .s { color: #BA2121 } /* Literal.String */
+.codehilite .na { color: #687822 } /* Name.Attribute */
+.codehilite .nb { color: #008000 } /* Name.Builtin */
+.codehilite .nc { color: #00F; font-weight: bold } /* Name.Class */
+.codehilite .no { color: #800 } /* Name.Constant */
+.codehilite .nd { color: #A2F } /* Name.Decorator */
+.codehilite .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.codehilite .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.codehilite .nf { color: #00F } /* Name.Function */
+.codehilite .nl { color: #767600 } /* Name.Label */
+.codehilite .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.codehilite .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.codehilite .nv { color: #19177C } /* Name.Variable */
+.codehilite .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.codehilite .w { color: #BBB } /* Text.Whitespace */
+.codehilite .mb { color: #666 } /* Literal.Number.Bin */
+.codehilite .mf { color: #666 } /* Literal.Number.Float */
+.codehilite .mh { color: #666 } /* Literal.Number.Hex */
+.codehilite .mi { color: #666 } /* Literal.Number.Integer */
+.codehilite .mo { color: #666 } /* Literal.Number.Oct */
+.codehilite .sa { color: #BA2121 } /* Literal.String.Affix */
+.codehilite .sb { color: #BA2121 } /* Literal.String.Backtick */
+.codehilite .sc { color: #BA2121 } /* Literal.String.Char */
+.codehilite .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.codehilite .s2 { color: #BA2121 } /* Literal.String.Double */
+.codehilite .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.codehilite .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.codehilite .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.codehilite .sx { color: #008000 } /* Literal.String.Other */
+.codehilite .sr { color: #A45A77 } /* Literal.String.Regex */
+.codehilite .s1 { color: #BA2121 } /* Literal.String.Single */
+.codehilite .ss { color: #19177C } /* Literal.String.Symbol */
+.codehilite .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #00F } /* Name.Function.Magic */
+.codehilite .vc { color: #19177C } /* Name.Variable.Class */
+.codehilite .vg { color: #19177C } /* Name.Variable.Global */
+.codehilite .vi { color: #19177C } /* Name.Variable.Instance */
+.codehilite .vm { color: #19177C } /* Name.Variable.Magic */
+.codehilite .il { color: #666 } /* Literal.Number.Integer.Long */
+  @media (prefers-color-scheme: dark) { pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #49483e }
+.codehilite { background: #272822; color: #F8F8F2 }
+.codehilite .c { color: #959077 } /* Comment */
+.codehilite .err { color: #ED007E; background-color: #1E0010 } /* Error */
+.codehilite .esc { color: #F8F8F2 } /* Escape */
+.codehilite .g { color: #F8F8F2 } /* Generic */
+.codehilite .k { color: #66D9EF } /* Keyword */
+.codehilite .l { color: #AE81FF } /* Literal */
+.codehilite .n { color: #F8F8F2 } /* Name */
+.codehilite .o { color: #FF4689 } /* Operator */
+.codehilite .x { color: #F8F8F2 } /* Other */
+.codehilite .p { color: #F8F8F2 } /* Punctuation */
+.codehilite .ch { color: #959077 } /* Comment.Hashbang */
+.codehilite .cm { color: #959077 } /* Comment.Multiline */
+.codehilite .cp { color: #959077 } /* Comment.Preproc */
+.codehilite .cpf { color: #959077 } /* Comment.PreprocFile */
+.codehilite .c1 { color: #959077 } /* Comment.Single */
+.codehilite .cs { color: #959077 } /* Comment.Special */
+.codehilite .gd { color: #FF4689 } /* Generic.Deleted */
+.codehilite .ge { color: #F8F8F2; font-style: italic } /* Generic.Emph */
+.codehilite .ges { color: #F8F8F2; font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #F8F8F2 } /* Generic.Error */
+.codehilite .gh { color: #F8F8F2 } /* Generic.Heading */
+.codehilite .gi { color: #A6E22E } /* Generic.Inserted */
+.codehilite .go { color: #66D9EF } /* Generic.Output */
+.codehilite .gp { color: #FF4689; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { color: #F8F8F2; font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #959077 } /* Generic.Subheading */
+.codehilite .gt { color: #F8F8F2 } /* Generic.Traceback */
+.codehilite .kc { color: #66D9EF } /* Keyword.Constant */
+.codehilite .kd { color: #66D9EF } /* Keyword.Declaration */
+.codehilite .kn { color: #FF4689 } /* Keyword.Namespace */
+.codehilite .kp { color: #66D9EF } /* Keyword.Pseudo */
+.codehilite .kr { color: #66D9EF } /* Keyword.Reserved */
+.codehilite .kt { color: #66D9EF } /* Keyword.Type */
+.codehilite .ld { color: #E6DB74 } /* Literal.Date */
+.codehilite .m { color: #AE81FF } /* Literal.Number */
+.codehilite .s { color: #E6DB74 } /* Literal.String */
+.codehilite .na { color: #A6E22E } /* Name.Attribute */
+.codehilite .nb { color: #F8F8F2 } /* Name.Builtin */
+.codehilite .nc { color: #A6E22E } /* Name.Class */
+.codehilite .no { color: #66D9EF } /* Name.Constant */
+.codehilite .nd { color: #A6E22E } /* Name.Decorator */
+.codehilite .ni { color: #F8F8F2 } /* Name.Entity */
+.codehilite .ne { color: #A6E22E } /* Name.Exception */
+.codehilite .nf { color: #A6E22E } /* Name.Function */
+.codehilite .nl { color: #F8F8F2 } /* Name.Label */
+.codehilite .nn { color: #F8F8F2 } /* Name.Namespace */
+.codehilite .nx { color: #A6E22E } /* Name.Other */
+.codehilite .py { color: #F8F8F2 } /* Name.Property */
+.codehilite .nt { color: #FF4689 } /* Name.Tag */
+.codehilite .nv { color: #F8F8F2 } /* Name.Variable */
+.codehilite .ow { color: #FF4689 } /* Operator.Word */
+.codehilite .pm { color: #F8F8F2 } /* Punctuation.Marker */
+.codehilite .w { color: #F8F8F2 } /* Text.Whitespace */
+.codehilite .mb { color: #AE81FF } /* Literal.Number.Bin */
+.codehilite .mf { color: #AE81FF } /* Literal.Number.Float */
+.codehilite .mh { color: #AE81FF } /* Literal.Number.Hex */
+.codehilite .mi { color: #AE81FF } /* Literal.Number.Integer */
+.codehilite .mo { color: #AE81FF } /* Literal.Number.Oct */
+.codehilite .sa { color: #E6DB74 } /* Literal.String.Affix */
+.codehilite .sb { color: #E6DB74 } /* Literal.String.Backtick */
+.codehilite .sc { color: #E6DB74 } /* Literal.String.Char */
+.codehilite .dl { color: #E6DB74 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #E6DB74 } /* Literal.String.Doc */
+.codehilite .s2 { color: #E6DB74 } /* Literal.String.Double */
+.codehilite .se { color: #AE81FF } /* Literal.String.Escape */
+.codehilite .sh { color: #E6DB74 } /* Literal.String.Heredoc */
+.codehilite .si { color: #E6DB74 } /* Literal.String.Interpol */
+.codehilite .sx { color: #E6DB74 } /* Literal.String.Other */
+.codehilite .sr { color: #E6DB74 } /* Literal.String.Regex */
+.codehilite .s1 { color: #E6DB74 } /* Literal.String.Single */
+.codehilite .ss { color: #E6DB74 } /* Literal.String.Symbol */
+.codehilite .bp { color: #F8F8F2 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #A6E22E } /* Name.Function.Magic */
+.codehilite .vc { color: #F8F8F2 } /* Name.Variable.Class */
+.codehilite .vg { color: #F8F8F2 } /* Name.Variable.Global */
+.codehilite .vi { color: #F8F8F2 } /* Name.Variable.Instance */
+.codehilite .vm { color: #F8F8F2 } /* Name.Variable.Magic */
+.codehilite .il { color: #AE81FF } /* Literal.Number.Integer.Long */ }
+  .codehilite { border: 1px solid var(--line); border-radius: 10px;
+    overflow-x: auto; margin: 0 0 8px; }
+  .codehilite pre { margin: 0; padding: 12px 16px;
+    font: 13px/1.55 ui-monospace, "SF Mono", Menlo, monospace; }
+  .codehilite code { background: transparent; padding: 0; } /* Inline-code-Stil neutralisieren */
+  /* Farb-Labels: verbinden Code-Abschnitte mit den Diagramm-Blöcken */
+  .codeblock-label { display: inline-block; font-size: 12.5px; font-weight: 600;
+    padding: 3px 12px; margin: 16px 0 0; border-radius: 8px 8px 0 0;
+    background: color-mix(in oklab, var(--ink) 6%, transparent);
+    color: var(--ink-2); border-left: 4px solid var(--ink-3); }
+  .codeblock-label + .codehilite { border-top-left-radius: 0; }
+  .codeblock-label[data-tone="blau"] { border-left-color: #2a78d6; }
+  .codeblock-label[data-tone="rot"] { border-left-color: #d03b3b; }
+  .codeblock-label[data-tone="gelb"] { border-left-color: #fab219; }
+  .codeblock-label[data-tone="gruen"] { border-left-color: #0ca30c; }
+  .codeblock-label[data-tone="blau"] + .codehilite { border-left: 4px solid #2a78d6; }
+  .codeblock-label[data-tone="rot"] + .codehilite { border-left: 4px solid #d03b3b; }
+  .codeblock-label[data-tone="gelb"] + .codehilite { border-left: 4px solid #fab219; }
+  .codeblock-label[data-tone="gruen"] + .codehilite { border-left: 4px solid #0ca30c; }
+  /* Zweispaltige Code-Ansicht: Code links, Erklärnotizen rechts daneben.
+     Bricht aus der Textspalte aus (breiter als main), damit der Code Platz hat. */
+  .code-row { display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 0 20px; align-items: start; margin: 16px 0 8px;
+    width: min(1220px, calc(100vw - 48px));
+    position: relative; left: 50%; transform: translateX(-50%); }
+  .code-row .codeblock-label { margin-top: 0; }
+  .code-notes { font-size: 13.5px; color: var(--ink-2); line-height: 1.55;
+    padding: 30px 0 0 14px; border-left: 1px solid var(--line); }
+  .code-notes ul { margin: 0; padding-left: 16px; }
+  .code-notes li { margin: 0 0 9px; }
+  .code-notes code { font-size: .85em; }
+  @media (max-width: 1000px) {
+    .code-row { grid-template-columns: 1fr; width: auto; left: 0; transform: none; }
+    .code-notes { padding: 6px 0 0; border-left: 0; }
+  }
+  details { background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 16px; margin: 10px 0; }
+  details summary { cursor: pointer; font-weight: 550; }
+  details[open] summary { margin-bottom: 6px; color: var(--accent); }
+  blockquote { border-left: 3px solid var(--accent); margin: 1em 0;
+    padding: 2px 0 2px 14px; color: var(--ink-2); }
+  li { margin: .25em 0; }
+  @media print {
+    body { background: #fff; color: #000; font-size: 12px; }
+    .topnav { display: none; }
+    .code-row { width: auto; left: 0; transform: none; }
+    details { break-inside: avoid; } details:not([open]) summary ~ * { display: block; }
+    pre.mermaid { break-inside: avoid; border: 1px solid #ccc; }
+    h2 { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<nav class="topnav"><div class="inner"><span class="brand">Invoice-to-Approval · Lernseiten</span><a href="poc-walkthrough.html">POC-Walkthrough</a><a href="skript-atlas.html">Skript-Atlas</a><span class="sep" aria-hidden="true">·</span><a href="atlas-parsers.html" class="active">parsers.py</a><a href="atlas-validation.html">validation.py</a><a href="atlas-routing.html">routing.py</a><a href="atlas-run.html">run.py</a><a href="atlas-belegflut.html">belegflut.py</a><a href="atlas-e2e-smoke.html">e2e_smoke.py</a></div></nav>
+<main>
+<h1>parsers.py — Format-Erkennung und drei Parser-Wege (Schicht 1)</h1>
+<p><strong>Zweck in einem Satz:</strong> Macht aus einer Eingangsdatei (XML oder PDF) ein
+einheitliches <code>Invoice</code>-Objekt — über den zuverlässigsten verfügbaren Weg:
+strukturiertes XML zuerst, eingebettetes ZUGFeRD-XML als zweites, Text-Raten
+nur als letzter Ausweg.</p>
+<p><strong>Einordnung in die Kette:</strong> Erste Schicht der Pipeline. Alles Weitere
+(<a href="atlas-validation.html">validation.py</a>, <a href="atlas-routing.html">routing.py</a>) arbeitet
+nur noch mit dem kanonischen <code>Invoice</code>-Modell — die Format-Vielfalt endet hier.</p>
+<h2>Eingaben und Ausgaben</h2>
+<table>
+<thead>
+<tr>
+<th>Was</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Eingabe</td>
+<td>Dateipfad: <code>.xml</code> (XRechnung UBL oder CII) oder <code>.pdf</code> (ZUGFeRD mit eingebettetem XML, sonst Scan/Text)</td>
+</tr>
+<tr>
+<td>Ausgabe</td>
+<td><code>Invoice</code> mit <code>source_format</code> (welcher Weg wurde genommen) und <code>extraction_confidence</code> (1,0 deterministisch · 0,6 Text-Heuristik)</td>
+</tr>
+</tbody>
+</table>
+<h2>Ablauf</h2>
+<pre class="mermaid">flowchart TD
+    A["parse_file(path)"] --> B{"Dateiendung?"}
+    B -->|".xml"| X["_parse_xml (gehärtet)<br/>Root-Element?"]
+    B -->|".pdf"| E["_extract_embedded_xml<br/>(ZUGFeRD-Anhang suchen)"]
+    X -->|"Invoice"| U["_parse_ubl<br/>Confidence 1,0"]
+    X -->|"CrossIndustryInvoice"| C["_parse_cii<br/>Confidence 1,0"]
+    E -->|"XML gefunden"| X2["_parse_xml<br/>→ Format ZUGFERD_PDF"]
+    E -->|"kein XML"| F["_parse_pdf_fallback<br/>Text + Regex · Confidence 0,6"]
+    classDef weiche stroke:#2a78d6,stroke-width:2.5px
+    classDef xmlp stroke:#fab219,stroke-width:2.5px
+    classDef zug stroke:#0ca30c,stroke-width:2.5px
+    classDef fallb stroke:#d03b3b,stroke-width:2.5px
+    class A,B weiche
+    class X,U,C,X2 xmlp
+    class E zug
+    class F fallb
+</pre>
+<p>Farben unten im Code: <strong>Blau</strong> = Aufbau und Weiche · <strong>Gelb</strong> = XML-Parser
+(UBL/CII) · <strong>Grün</strong> = ZUGFeRD-Extraktion · <strong>Rot</strong> = Text-Fallback (der
+unsicherste Weg — deshalb Confidence 0,6, die im Routing nie dunkelbucht).</p>
+<h2>Variablen und Rahmenkriterien</h2>
+<table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Wert</th>
+<th>Warum so</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_SAFE_XML</code></td>
+<td>resolve_entities=False, no_network=True, load_dtd=False, huge_tree=False</td>
+<td>Eingangsrechnungen sind Fremddaten: kein Entity-Auflösen (XXE), kein Netz, keine Entity-Bomben ("Billion Laughs"). Als Regressionstest verankert</td>
+</tr>
+<tr>
+<td><code>NS_UBL</code> / <code>NS_CII</code></td>
+<td>XML-Namespace-Tabellen</td>
+<td>XRechnung nutzt lange Namespace-URIs; die Kürzel (cbc, cac, ram …) machen die XPath-Ausdrücke lesbar</td>
+</tr>
+<tr>
+<td><code>XML_ATTACHMENT_NAMES</code></td>
+<td>factur-x.xml, zugferd-invoice.xml, xrechnung.xml</td>
+<td>die drei üblichen Dateinamen des eingebetteten XML in ZUGFeRD/Factur-X-PDFs</td>
+</tr>
+<tr>
+<td><code>MONEY</code></td>
+<td>Regex <code>([\d.]+,\d{2})</code></td>
+<td>deutsches Betragsformat im Fallback: Punkt als Tausender-, Komma als Dezimaltrenner</td>
+</tr>
+<tr>
+<td>Confidence</td>
+<td>1,0 / 0,6</td>
+<td>XML-Wege sind deterministisch (1,0); der Text-Fallback ist geraten (0,6 — bewusst unter dem 0,9-Gate des Routings)</td>
+</tr>
+</tbody>
+</table>
+<h2>Prüfungen und Fehlerpfade</h2>
+<ul>
+<li>Unbekannte Dateiendung und unbekanntes XML-Root-Element werfen sofort
+  <code>ValueError</code> — lieber laut scheitern als still falsch parsen.</li>
+<li>Kaputtes/leeres XML wirft in <code>etree.fromstring</code> — der adversariale Test
+  (<code>a2</code>, <code>a3</code>) verankert genau das.</li>
+<li>Fehlende Felder werden zu Platzhaltern (<code>"?"</code>, <code>"0"</code>) statt Abstürzen — die
+  Validierung (V06) macht daraus dann saubere Befunde.</li>
+</ul>
+<h2>Der vollständige Code — geführt</h2>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Aufbau · Strategie-Docstring, Importe, Namespace-Tabellen (Z. 1–32)</div>
+<div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Format-Erkennung und Parser: UBL-XML, CII-XML, ZUGFeRD-PDF, PDF-Fallback.</span>
+
+<span class="sd">Strategie (Reihenfolge = Zuverlässigkeit):</span>
+<span class="sd">  1. XML (XRechnung): UBL oder CII — deterministisch, confidence 1.0</span>
+<span class="sd">  2. PDF mit eingebettetem XML (ZUGFeRD/Factur-X): XML extrahieren -&gt; wie 1.</span>
+<span class="sd">  3. PDF ohne XML: Text-Extraktion + Regex-Heuristik, confidence 0.6.</span>
+<span class="sd">     Hier würde produktiv eine LLM-Extraktion (Vision-Modell + Pydantic-Schema,</span>
+<span class="sd">     z.B. via instructor) andocken — siehe llm_extract_stub().</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">io</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">re</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span><span class="p">,</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">decimal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Decimal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">pdfplumber</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">lxml</span><span class="w"> </span><span class="kn">import</span> <span class="n">etree</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pypdf</span><span class="w"> </span><span class="kn">import</span> <span class="n">PdfReader</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Invoice</span><span class="p">,</span> <span class="n">LineItem</span><span class="p">,</span> <span class="n">Party</span><span class="p">,</span> <span class="n">SourceFormat</span><span class="p">,</span> <span class="n">TaxBreakdown</span>
+
+<span class="n">NS_UBL</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;inv&quot;</span><span class="p">:</span> <span class="s2">&quot;urn:oasis:names:specification:ubl:schema:xsd:Invoice-2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cac&quot;</span><span class="p">:</span> <span class="s2">&quot;urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;cbc&quot;</span><span class="p">:</span> <span class="s2">&quot;urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">NS_CII</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;rsm&quot;</span><span class="p">:</span> <span class="s2">&quot;urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ram&quot;</span><span class="p">:</span> <span class="s2">&quot;urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;udt&quot;</span><span class="p">:</span> <span class="s2">&quot;urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Drei Parser-Bibliotheken, drei Aufgaben:</strong> <code>lxml</code> liest XML, <code>pypdf</code>
+  holt Datei-Anhänge aus PDFs, <code>pdfplumber</code> extrahiert sichtbaren Text.</li>
+<li><strong>Namespaces:</strong> XML-Elemente der XRechnung heißen voll qualifiziert z. B.
+  <code>{urn:…:CommonBasicComponents-2}ID</code> — die Tabellen ordnen den langen URIs
+  Kürzel zu, damit XPath-Ausdrücke wie <code>cbc:ID</code> lesbar bleiben.</li>
+<li>Die <strong>Strategie im Docstring</strong> ist die Kernaussage der Datei: Reihenfolge
+  = Zuverlässigkeit, und der LLM-Andockpunkt ist benannt, nicht versteckt.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Die Weiche · parse_file entscheidet den Weg (Z. 35–45)</div>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">parse_file</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Invoice</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.xml&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_parse_xml</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">(),</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">path</span><span class="o">.</span><span class="n">suffix</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;.pdf&quot;</span><span class="p">:</span>
+        <span class="n">embedded</span> <span class="o">=</span> <span class="n">_extract_embedded_xml</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">embedded</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">inv</span> <span class="o">=</span> <span class="n">_parse_xml</span><span class="p">(</span><span class="n">embedded</span><span class="p">,</span> <span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">inv</span><span class="o">.</span><span class="n">source_format</span> <span class="o">=</span> <span class="n">SourceFormat</span><span class="o">.</span><span class="n">ZUGFERD_PDF</span>
+            <span class="k">return</span> <span class="n">inv</span>
+        <span class="k">return</span> <span class="n">_parse_pdf_fallback</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Nicht unterstütztes Format: </span><span class="si">{</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>suffix.lower()</code>:</strong> <code>.XML</code> und <code>.xml</code> gleichbehandeln.</li>
+<li><strong>ZUGFeRD ist "PDF, aber eigentlich XML":</strong> findet sich ein eingebetteter
+  Anhang, läuft derselbe XML-Parser — nur das <code>source_format</code> wird danach
+  auf ZUGFERD_PDF umgestellt (fürs Reporting).</li>
+<li><strong><code>is not None</code> statt Truthy-Check:</strong> ein leerer Bytes-Anhang wäre auch
+  "falsy" — die explizite Prüfung unterscheidet "kein Anhang" von
+  "leerer Anhang".</li>
+<li>Unbekannte Endung → sofortiger <code>ValueError</code>, kein stilles Raten.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Gehärteter XML-Einstieg + der XPath-Helfer (Z. 48–69)</div>
+<div class="codehilite"><pre><span></span><code><span class="c1"># --- XML (XRechnung: UBL / CII) -----------------------------------------</span>
+
+<span class="c1"># Gehärteter Parser: Eingangsrechnungen sind Fremddaten. Keine Entity-Expansion,</span>
+<span class="c1"># kein DTD-Load, kein Netzwerkzugriff — schließt XXE und Billion-Laughs aus.</span>
+<span class="n">_SAFE_XML</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">XMLParser</span><span class="p">(</span>
+    <span class="n">resolve_entities</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">no_network</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">load_dtd</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">huge_tree</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_xml</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Invoice</span><span class="p">:</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">parser</span><span class="o">=</span><span class="n">_SAFE_XML</span><span class="p">)</span>
+    <span class="n">tag</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">QName</span><span class="p">(</span><span class="n">root</span><span class="p">)</span><span class="o">.</span><span class="n">localname</span>
+    <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;Invoice&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_parse_ubl</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tag</span> <span class="o">==</span> <span class="s2">&quot;CrossIndustryInvoice&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_parse_cii</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unbekanntes XML-Root-Element: </span><span class="si">{</span><span class="n">tag</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">xpath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="n">xpath</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">ns</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">if</span> <span class="n">r</span> <span class="ow">and</span> <span class="n">r</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">text</span> <span class="k">else</span> <span class="kc">None</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>_SAFE_XML</code> ist die Sicherheitsentscheidung der Datei:</strong> vier Flags, die
+  XXE (externe Entities lesen lokale Dateien) und Entity-Bomben abschalten.
+  Der Test <code>test_xxe_entity_wird_nicht_aufgeloest</code> hält das dauerhaft fest.</li>
+<li><strong>Format-Erkennung am Root-Element:</strong> UBL-Rechnungen heißen <code>Invoice</code>,
+  CII-Rechnungen <code>CrossIndustryInvoice</code> — ein Blick genügt.</li>
+<li><strong><code>_x</code> ist der zentrale Lese-Helfer:</strong> XPath ausführen, erstes Ergebnis
+  nehmen, Text trimmen, sonst <code>None</code>. Dass ALLE Feldzugriffe durch diese eine
+  Funktion laufen, hält die beiden großen Parser darunter kompakt.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">UBL-Parser · XRechnung in der UBL-Syntax (Z. 72–105)</div>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_parse_ubl</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Invoice</span><span class="p">:</span>
+    <span class="n">ns</span> <span class="o">=</span> <span class="n">NS_UBL</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">il</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s2">&quot;//cac:InvoiceLine&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">ns</span><span class="p">):</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LineItem</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;.//cac:Item/cbc:Name&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;?&quot;</span><span class="p">,</span>
+            <span class="n">quantity</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;./cbc:InvoicedQuantity&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">unit_price</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;.//cac:Price/cbc:PriceAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">net_amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;./cbc:LineExtensionAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="p">))</span>
+    <span class="n">taxes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">ts</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s2">&quot;//cac:TaxTotal/cac:TaxSubtotal&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">ns</span><span class="p">):</span>
+        <span class="n">taxes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TaxBreakdown</span><span class="p">(</span>
+            <span class="n">rate</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="s2">&quot;.//cac:TaxCategory/cbc:Percent&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">base</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="s2">&quot;./cbc:TaxableAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">ts</span><span class="p">,</span> <span class="s2">&quot;./cbc:TaxAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="p">))</span>
+    <span class="k">return</span> <span class="n">Invoice</span><span class="p">(</span>
+        <span class="n">invoice_number</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;/inv:Invoice/cbc:ID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;?&quot;</span><span class="p">,</span>
+        <span class="n">issue_date</span><span class="o">=</span><span class="n">date</span><span class="o">.</span><span class="n">fromisoformat</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;/inv:Invoice/cbc:IssueDate&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)),</span>
+        <span class="n">currency</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;/inv:Invoice/cbc:DocumentCurrencyCode&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;EUR&quot;</span><span class="p">,</span>
+        <span class="n">seller</span><span class="o">=</span><span class="n">Party</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//cac:AccountingSupplierParty//cac:PartyLegalEntity/cbc:RegistrationName&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;?&quot;</span><span class="p">,</span>
+            <span class="n">vat_id</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//cac:AccountingSupplierParty//cac:PartyTaxScheme/cbc:CompanyID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+            <span class="n">iban</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//cac:PaymentMeans//cac:PayeeFinancialAccount/cbc:ID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+        <span class="p">),</span>
+        <span class="n">buyer_name</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//cac:AccountingCustomerParty//cac:PartyLegalEntity/cbc:RegistrationName&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+        <span class="n">purchase_order_ref</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//cac:OrderReference/cbc:ID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+        <span class="n">lines</span><span class="o">=</span><span class="n">lines</span><span class="p">,</span> <span class="n">taxes</span><span class="o">=</span><span class="n">taxes</span><span class="p">,</span>
+        <span class="n">total_net</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//cac:LegalMonetaryTotal/cbc:LineExtensionAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="n">total_tax</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;/inv:Invoice/cac:TaxTotal/cbc:TaxAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="n">total_gross</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//cac:LegalMonetaryTotal/cbc:TaxInclusiveAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="n">source_format</span><span class="o">=</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">UBL</span><span class="p">,</span> <span class="n">source_file</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Struktur = drei Sammel-Schritte:</strong> Positionen (<code>InvoiceLine</code>),
+  Steuerblöcke (<code>TaxSubtotal</code>), dann das große <code>Invoice(...)</code> mit den
+  Kopffeldern.</li>
+<li><strong><code>or "?"</code> / <code>or "0"</code>:</strong> fehlende Felder werden zu Platzhaltern statt
+  Abstürzen — V06 in der Validierung meldet das dann kontrolliert.</li>
+<li><strong><code>purchase_order_ref</code> aus <code>OrderReference/ID</code>:</strong> das EN-16931-Feld BT-13 —
+  der Schlüssel für den 3-Way-Match im Routing.</li>
+<li><strong><code>date.fromisoformat</code>:</strong> UBL schreibt Daten als <code>2026-07-01</code> — direkt
+  parsebar. (Vergleiche CII unten: anderes Format, andere Funktion.)</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">CII-Parser · dieselbe Semantik, völlig andere Struktur (Z. 108–142)</div>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">_parse_cii</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Invoice</span><span class="p">:</span>
+    <span class="n">ns</span> <span class="o">=</span> <span class="n">NS_CII</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">il</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s2">&quot;//ram:IncludedSupplyChainTradeLineItem&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">ns</span><span class="p">):</span>
+        <span class="n">lines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">LineItem</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;.//ram:SpecifiedTradeProduct/ram:Name&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;?&quot;</span><span class="p">,</span>
+            <span class="n">quantity</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;.//ram:BilledQuantity&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">unit_price</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;.//ram:NetPriceProductTradePrice/ram:ChargeAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">net_amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">il</span><span class="p">,</span> <span class="s2">&quot;.//ram:SpecifiedTradeSettlementLineMonetarySummation/ram:LineTotalAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="p">))</span>
+    <span class="n">taxes</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">tt</span> <span class="ow">in</span> <span class="n">root</span><span class="o">.</span><span class="n">xpath</span><span class="p">(</span><span class="s2">&quot;//ram:ApplicableHeaderTradeSettlement/ram:ApplicableTradeTax&quot;</span><span class="p">,</span> <span class="n">namespaces</span><span class="o">=</span><span class="n">ns</span><span class="p">):</span>
+        <span class="n">taxes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TaxBreakdown</span><span class="p">(</span>
+            <span class="n">rate</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="s2">&quot;./ram:RateApplicablePercent&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">base</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="s2">&quot;./ram:BasisAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+            <span class="n">amount</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">tt</span><span class="p">,</span> <span class="s2">&quot;./ram:CalculatedAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="p">))</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//rsm:ExchangedDocument/ram:IssueDateTime/udt:DateTimeString&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Invoice</span><span class="p">(</span>
+        <span class="n">invoice_number</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//rsm:ExchangedDocument/ram:ID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;?&quot;</span><span class="p">,</span>
+        <span class="n">issue_date</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ds</span><span class="p">,</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">(),</span>
+        <span class="n">currency</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:InvoiceCurrencyCode&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;EUR&quot;</span><span class="p">,</span>
+        <span class="n">seller</span><span class="o">=</span><span class="n">Party</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:SellerTradeParty/ram:Name&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;?&quot;</span><span class="p">,</span>
+            <span class="n">vat_id</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:SellerTradeParty/ram:SpecifiedTaxRegistration/ram:ID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+            <span class="n">iban</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:PayeePartyCreditorFinancialAccount/ram:IBANID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+        <span class="p">),</span>
+        <span class="n">buyer_name</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:BuyerTradeParty/ram:Name&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+        <span class="n">purchase_order_ref</span><span class="o">=</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:BuyerOrderReferencedDocument/ram:IssuerAssignedID&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">),</span>
+        <span class="n">lines</span><span class="o">=</span><span class="n">lines</span><span class="p">,</span> <span class="n">taxes</span><span class="o">=</span><span class="n">taxes</span><span class="p">,</span>
+        <span class="n">total_net</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:LineTotalAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="n">total_tax</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:TaxTotalAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="n">total_gross</span><span class="o">=</span><span class="n">Decimal</span><span class="p">(</span><span class="n">_x</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="s2">&quot;//ram:SpecifiedTradeSettlementHeaderMonetarySummation/ram:GrandTotalAmount&quot;</span><span class="p">,</span> <span class="n">ns</span><span class="p">)</span> <span class="ow">or</span> <span class="s2">&quot;0&quot;</span><span class="p">),</span>
+        <span class="n">source_format</span><span class="o">=</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">CII</span><span class="p">,</span> <span class="n">source_file</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Der Seite-an-Seite-Beweis für "gleiche Semantik, andere Syntax":</strong>
+  identischer Aufbau wie der UBL-Parser, aber jede Pfad-Zeile ist anders —
+  die Positionszeile heißt hier <code>IncludedSupplyChainTradeLineItem</code> statt
+  <code>InvoiceLine</code>.</li>
+<li><strong><code>strptime(ds, "%Y%m%d")</code>:</strong> CII schreibt Daten als <code>20260701</code> —
+  deshalb ein anderer Datums-Parser als bei UBL. Genau solche Details
+  machen den Unterschied zwischen "beide Formate unterstützt" und
+  "kompiliert, aber crasht".</li>
+<li>Das Ergebnis ist trotzdem <strong>dasselbe <code>Invoice</code>-Modell</strong> — ab hier ist der
+  Pipeline egal, welche Syntax der Beleg hatte.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gruen">ZUGFeRD · das XML aus dem PDF holen (Z. 145–155)</div>
+<div class="codehilite"><pre><span></span><code><span class="c1"># --- ZUGFeRD: eingebettetes XML aus PDF/A-3 ------------------------------</span>
+
+<span class="n">XML_ATTACHMENT_NAMES</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;factur-x.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;zugferd-invoice.xml&quot;</span><span class="p">,</span> <span class="s2">&quot;xrechnung.xml&quot;</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_extract_embedded_xml</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">PdfReader</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">content_list</span> <span class="ow">in</span> <span class="n">reader</span><span class="o">.</span><span class="n">attachments</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">XML_ATTACHMENT_NAMES</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">content_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="kc">None</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>PDF/A-3 erlaubt Datei-Anhänge</strong> — ZUGFeRD nutzt das: ein PDF fürs Auge,
+  darin ein XML für die Maschine. <code>pypdf</code> listet die Anhänge auf.</li>
+<li><strong>Set-Lookup über bekannte Dateinamen:</strong> die drei Namen decken
+  ZUGFeRD-Versionen und den französischen Zwilling Factur-X ab.</li>
+<li><strong><code>None</code> als bewusste Antwort:</strong> "kein XML gefunden" ist kein Fehler,
+  sondern die Weiche zum Fallback-Pfad.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="rot">Text-Fallback · Regex-Heuristik mit Confidence 0,6 (Z. 158–194)</div>
+<div class="codehilite"><pre><span></span><code><span class="c1"># --- PDF-Fallback: Text + Regex (produktiv: LLM-Extraktion) ---------------</span>
+
+<span class="n">MONEY</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;([\d.]+,\d</span><span class="si">{2}</span><span class="s2">)&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_dec</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Decimal</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">Decimal</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">))</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_parse_pdf_fallback</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Invoice</span><span class="p">:</span>
+    <span class="k">with</span> <span class="n">pdfplumber</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">))</span> <span class="k">as</span> <span class="n">pdf</span><span class="p">:</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">extract_text</span><span class="p">()</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pdf</span><span class="o">.</span><span class="n">pages</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">find</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">m</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="k">if</span> <span class="n">m</span> <span class="k">else</span> <span class="n">default</span>
+
+    <span class="n">num</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Rechnung(?:s-?Nr\.?|snummer)[:\s]+(\S+)&quot;</span><span class="p">,</span> <span class="s2">&quot;?&quot;</span><span class="p">)</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;Datum[:\s]+(\d</span><span class="si">{2}</span><span class="s2">\.\d</span><span class="si">{2}</span><span class="s2">\.\d</span><span class="si">{4}</span><span class="s2">)&quot;</span><span class="p">)</span>
+    <span class="n">net</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="sa">rf</span><span class="s2">&quot;Netto(?:betrag)?[:\s]+</span><span class="si">{</span><span class="n">MONEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tax</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="sa">rf</span><span class="s2">&quot;(?:USt|MwSt)\.?\s*(?:19|7)?\s*%?[:\s]+</span><span class="si">{</span><span class="n">MONEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">gross</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="sa">rf</span><span class="s2">&quot;(?:Brutto|Gesamt)(?:betrag)?[:\s]+</span><span class="si">{</span><span class="n">MONEY</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">seller</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^(.+?)\n&quot;</span><span class="p">,</span> <span class="s2">&quot;Unbekannt&quot;</span><span class="p">)</span>
+    <span class="n">iban</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;IBAN[:\s]+([A-Z]</span><span class="si">{2}</span><span class="s2">\d[\dA-Z ]{12,32})&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">Invoice</span><span class="p">(</span>
+        <span class="n">invoice_number</span><span class="o">=</span><span class="n">num</span><span class="p">,</span>
+        <span class="n">issue_date</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%d</span><span class="s2">.%m.%Y&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">date</span><span class="p">()</span> <span class="k">if</span> <span class="n">d</span> <span class="k">else</span> <span class="n">date</span><span class="p">(</span><span class="mi">1900</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">seller</span><span class="o">=</span><span class="n">Party</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">seller</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span> <span class="n">vat_id</span><span class="o">=</span><span class="n">find</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;(DE\d</span><span class="si">{9}</span><span class="s2">)&quot;</span><span class="p">),</span>
+                     <span class="n">iban</span><span class="o">=</span><span class="n">iban</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">iban</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">total_net</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="n">net</span><span class="p">)</span> <span class="k">if</span> <span class="n">net</span> <span class="k">else</span> <span class="n">Decimal</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+        <span class="n">total_tax</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="n">tax</span><span class="p">)</span> <span class="k">if</span> <span class="n">tax</span> <span class="k">else</span> <span class="n">Decimal</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+        <span class="n">total_gross</span><span class="o">=</span><span class="n">_dec</span><span class="p">(</span><span class="n">gross</span><span class="p">)</span> <span class="k">if</span> <span class="n">gross</span> <span class="k">else</span> <span class="n">Decimal</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+        <span class="n">source_format</span><span class="o">=</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">PDF_FALLBACK</span><span class="p">,</span>
+        <span class="n">extraction_confidence</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+        <span class="n">source_file</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+    <span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>_dec("1.428,00") → 1428.00</code>:</strong> deutsches Zahlenformat umdrehen —
+  Tausenderpunkt raus, Komma wird Dezimalpunkt. (Der umgekehrte Weg — englische
+  Decimal-Ausgabe in deutschen Begründungstexten — ist eine bekannte offene
+  Kleinigkeit der Kette.)</li>
+<li><strong><code>(?:…)</code>:</strong> nicht-fangende Gruppen — matchen Varianten
+  ("Rechnungs-Nr.", "Rechnungsnummer"), ohne das Ergebnis zu verschieben.</li>
+<li><strong><code>extraction_confidence=0.6</code> ist die wichtigste Zeile:</strong> dieser Pfad rät.
+  Die 0,6 liegt bewusst unter dem 0,9-Gate des Routings — ein geratener
+  Beleg landet IMMER bei einem Menschen (Szenario s6).</li>
+<li><strong><code>date(1900, 1, 1)</code> als Notnagel:</strong> fehlt das Datum, fällt der Beleg in
+  V07 ("älter als 1 Jahr") auf — der Platzhalter ist absichtlich auffällig.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Der benannte Andockpunkt · llm_extract_stub (Z. 197–211)</div>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">llm_extract_stub</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Andockpunkt für produktive LLM-Extraktion unstrukturierter Belege.</span>
+
+<span class="sd">    Muster (siehe Research-Note): Vision-LLM (z.B. Claude) erhält das Belegbild</span>
+<span class="sd">    plus das Pydantic-JSON-Schema von `Invoice` und liefert validierte Felder;</span>
+<span class="sd">    Bibliothek `instructor` erzwingt Schema-Konformität mit Retry.</span>
+
+<span class="sd">    Ehrlichkeits-Hinweis: Im POC ist extraction_confidence eine gesetzte</span>
+<span class="sd">    Konstante (0.6 Text-Heuristik, 0.85 LLM-Demo) — bewusst so gewählt, dass</span>
+<span class="sd">    beide Pfade unter dem Routing-Schwellwert 0.9 bleiben und nie dunkel</span>
+<span class="sd">    gebucht werden. Produktiv würde der Wert aus Modell-Logprobs bzw.</span>
+<span class="sd">    Feld-Heuristiken abgeleitet.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Ein Stub als Dokumentation:</strong> die Funktion tut nichts
+  (<code>NotImplementedError</code>), aber sie <em>benennt</em> den produktiven Ausbau und
+  trägt den Ehrlichkeits-Hinweis zu den Confidence-Konstanten — derselbe
+  ehrliche Umgang wie in der übrigen Projekt-Doku.</li>
+<li>POC 05 (<code>llm_extract.py</code>) ist die lauffähige Demo genau dieses Musters:
+  Claude extrahiert, dieselben Regeln validieren, Confidence 0,85 bleibt
+  unter dem Gate.</li>
+</ul>
+</aside>
+</div>
+<p><strong>Zum Nachschlagen:</strong> Datei <code>poc/02-invoice-pipeline/pipeline/parsers.py</code> ·
+Tests: <code>tests/test_adversarial.py</code> (XXE, kaputtes XML, leere Datei).</p>
+<h2>Selbsttest</h2>
+<details>
+<summary>1. Warum ist die Reihenfolge XML → ZUGFeRD → Text-Fallback mehr als eine Geschmacksfrage?</summary>
+<p>Reihenfolge = Zuverlässigkeit = Confidence: strukturierte Wege sind
+deterministisch (1,0), der Text-Weg rät (0,6). Wer zuerst den unsichersten
+Weg probieren würde, verlöre Präzision, obwohl bessere Daten in der Datei
+stecken. Und die Confidence entscheidet später mit, ob ein Mensch draufschaut.</p>
+</details>
+<details>
+<summary>2. Was genau verhindert der _SAFE_XML-Parser, und wie ist das abgesichert?</summary>
+<p>XXE (eine externe Entity liest z. B. lokale Dateien und schleust den Inhalt
+in Felder ein) und Entity-Expansions-Bomben. Vier lxml-Flags schalten das ab.
+Abgesichert durch den adversarialen Testbeleg <code>a1_xxe.xml</code>, der als
+Regressionstest im Repo liegt — der Fix kann nicht unbemerkt zurückrollen.</p>
+</details>
+<details>
+<summary>3. Warum haben UBL und CII zwei getrennte Parser, obwohl beide "XRechnung" sind?</summary>
+<p>Gleiche Norm-Semantik (EN 16931), aber völlig andere XML-Strukturen und
+sogar Datumsformate (ISO <code>2026-07-01</code> vs. kompakt <code>20260701</code>). Gemeinsam ist
+ihnen das Ziel-Modell <code>Invoice</code> — die Format-Vielfalt endet an dieser Schicht.</p>
+</details>
+</main>
+<script src="mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: "loose",  /* erlaubt click-Links in Diagrammen */
+    theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral",
+    themeVariables: { fontSize: "16px",
+      fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' },
+    flowchart: { htmlLabels: true, curve: "basis", useMaxWidth: false }
+  });
+</script>
+</body>
+</html>

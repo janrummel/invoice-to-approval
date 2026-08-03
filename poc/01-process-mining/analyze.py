@@ -76,9 +76,13 @@ def main() -> None:
                      f"| {fmt_h(grp['tput_h'].mean())} | {fmt_h(grp['tput_h'].median())} |")
     happy = case_meta[case_meta["variant"] == "V1_happy_path"]["tput_h"].mean()
     dev = case_meta[case_meta["variant"].str.startswith(("V2", "V3"))]["tput_h"].mean()
+    happy_m = case_meta[case_meta["variant"] == "V1_happy_path"]["tput_h"].median()
+    dev_m = case_meta[case_meta["variant"].str.startswith(("V2", "V3"))]["tput_h"].median()
     lines += ["", f"**Befund:** Abweichungsfälle (V2/V3) laufen im Schnitt "
               f"**{dev/happy:.1f}x länger** als der Happy Path "
-              f"({fmt_h(dev)} vs. {fmt_h(happy)}).", ""]
+              f"({fmt_h(dev)} vs. {fmt_h(happy)}); auf dem Median gerechnet "
+              f"{dev_m/happy_m:.1f}x ({fmt_h(dev_m)} vs. {fmt_h(happy_m)}) — "
+              f"beide Sichten ausweisen, der Mittelwert reagiert auf Ausreißer.", ""]
 
     # --- 2. Bottlenecks (Wartezeit vor Aktivität) ------------------------
     df_s = df.sort_values(["case_id", "timestamp"])

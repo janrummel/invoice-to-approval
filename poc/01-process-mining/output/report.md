@@ -13,7 +13,7 @@ Datenbasis: **16518 Events, 2000 Rechnungsvorgänge**, 2026-01-05 bis 2026-07-16
 | V5_dublette_storno | 33 | 2% | 38.2 h | 36.0 h |
 | V5_dublette_ok | 16 | 1% | 34.5 h | 33.3 h |
 
-**Befund:** Abweichungsfälle (V2/V3) laufen im Schnitt **2.1x länger** als der Happy Path (14.8 d vs. 7.1 d).
+**Befund:** Abweichungsfälle (V2/V3) laufen im Schnitt **2.1x länger** als der Happy Path (14.8 d vs. 7.1 d); auf dem Median gerechnet 2.0x (14.5 d vs. 7.1 d) — beide Sichten ausweisen, der Mittelwert reagiert auf Ausreißer.
 
 ## 2. Bottlenecks (Wartezeit bis zur Aktivität)
 

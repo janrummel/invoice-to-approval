@@ -70,4 +70,9 @@ def validate(inv: Invoice, today: date) -> list[Finding]:
     elif inv.issue_date < today - timedelta(days=365):
         warn("V07", f"Rechnungsdatum älter als 1 Jahr: {inv.issue_date}")
 
+    # V08: Beträge müssen positiv sein (Grenzfall aus adversarialem Test)
+    if inv.total_gross <= 0 or inv.total_net < 0:
+        err("V08", f"Nicht-positiver Betrag: netto {inv.total_net}, "
+                   f"brutto {inv.total_gross}")
+
     return f

@@ -1,0 +1,1373 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>POC-Walkthrough: verstehen, durchdringen, erklären</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --surface: #fcfcfb; --card: #ffffff; --line: #e4e3df;
+    --ink: #1b1b1a; --ink-2: #52514e; --ink-3: #8a897f; --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --surface: #1a1a19; --card: #232322; --line: #3a3936;
+             --ink: #f2f1ec; --ink-2: #c3c2b7; --ink-3: #8a897f; --accent: #3987e5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--ink);
+         font: 16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .topnav { position: sticky; top: 0; z-index: 10; background: var(--surface);
+    border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .topnav .inner { max-width: 1220px; margin: 0 auto; padding: 9px 24px;
+    display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: center; }
+  .topnav .brand { font-weight: 650; color: var(--ink); margin-right: 10px; }
+  .topnav a { color: var(--ink-2); text-decoration: none; padding: 2px 9px;
+    border-radius: 999px; }
+  .topnav a:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); }
+  .topnav a.active { color: var(--accent); font-weight: 650;
+    background: color-mix(in oklab, var(--accent) 12%, transparent); }
+  .topnav .sep { color: var(--ink-3); }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 10px; }
+  h2 { font-size: 21px; margin: 2.2em 0 .6em; padding-top: .6em;
+        border-top: 1px solid var(--line); }
+  h1 + p, h2 + p { margin-top: 0; }
+  strong { font-weight: 650; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
+  a { color: var(--accent); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em;
+         background: color-mix(in oklab, var(--ink) 7%, transparent);
+         padding: 1px 5px; border-radius: 5px; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14.5px; }
+  th { text-align: left; color: var(--ink-3); font-weight: 550; font-size: 12.5px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  pre.mermaid { background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px; text-align: center; overflow-x: auto; }
+  pre.mermaid svg { max-width: none; } /* nicht herunterskalieren — Schrift bleibt lesbar */
+  /* Syntax-Highlighting (Pygments) — hell/dunkel getrennt */
+  pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #ffffcc }
+.codehilite { background: #f8f8f8; }
+.codehilite .c { color: #3D7B7B; font-style: italic } /* Comment */
+.codehilite .err { border: 1px solid #F00 } /* Error */
+.codehilite .k { color: #008000; font-weight: bold } /* Keyword */
+.codehilite .o { color: #666 } /* Operator */
+.codehilite .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.codehilite .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.codehilite .cp { color: #9C6500 } /* Comment.Preproc */
+.codehilite .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.codehilite .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.codehilite .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.codehilite .gd { color: #A00000 } /* Generic.Deleted */
+.codehilite .ge { font-style: italic } /* Generic.Emph */
+.codehilite .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #E40000 } /* Generic.Error */
+.codehilite .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.codehilite .gi { color: #008400 } /* Generic.Inserted */
+.codehilite .go { color: #717171 } /* Generic.Output */
+.codehilite .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.codehilite .gt { color: #04D } /* Generic.Traceback */
+.codehilite .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.codehilite .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.codehilite .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.codehilite .kp { color: #008000 } /* Keyword.Pseudo */
+.codehilite .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.codehilite .kt { color: #B00040 } /* Keyword.Type */
+.codehilite .m { color: #666 } /* Literal.Number */
+.codehilite .s { color: #BA2121 } /* Literal.String */
+.codehilite .na { color: #687822 } /* Name.Attribute */
+.codehilite .nb { color: #008000 } /* Name.Builtin */
+.codehilite .nc { color: #00F; font-weight: bold } /* Name.Class */
+.codehilite .no { color: #800 } /* Name.Constant */
+.codehilite .nd { color: #A2F } /* Name.Decorator */
+.codehilite .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.codehilite .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.codehilite .nf { color: #00F } /* Name.Function */
+.codehilite .nl { color: #767600 } /* Name.Label */
+.codehilite .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.codehilite .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.codehilite .nv { color: #19177C } /* Name.Variable */
+.codehilite .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.codehilite .w { color: #BBB } /* Text.Whitespace */
+.codehilite .mb { color: #666 } /* Literal.Number.Bin */
+.codehilite .mf { color: #666 } /* Literal.Number.Float */
+.codehilite .mh { color: #666 } /* Literal.Number.Hex */
+.codehilite .mi { color: #666 } /* Literal.Number.Integer */
+.codehilite .mo { color: #666 } /* Literal.Number.Oct */
+.codehilite .sa { color: #BA2121 } /* Literal.String.Affix */
+.codehilite .sb { color: #BA2121 } /* Literal.String.Backtick */
+.codehilite .sc { color: #BA2121 } /* Literal.String.Char */
+.codehilite .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.codehilite .s2 { color: #BA2121 } /* Literal.String.Double */
+.codehilite .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.codehilite .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.codehilite .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.codehilite .sx { color: #008000 } /* Literal.String.Other */
+.codehilite .sr { color: #A45A77 } /* Literal.String.Regex */
+.codehilite .s1 { color: #BA2121 } /* Literal.String.Single */
+.codehilite .ss { color: #19177C } /* Literal.String.Symbol */
+.codehilite .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #00F } /* Name.Function.Magic */
+.codehilite .vc { color: #19177C } /* Name.Variable.Class */
+.codehilite .vg { color: #19177C } /* Name.Variable.Global */
+.codehilite .vi { color: #19177C } /* Name.Variable.Instance */
+.codehilite .vm { color: #19177C } /* Name.Variable.Magic */
+.codehilite .il { color: #666 } /* Literal.Number.Integer.Long */
+  @media (prefers-color-scheme: dark) { pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #49483e }
+.codehilite { background: #272822; color: #F8F8F2 }
+.codehilite .c { color: #959077 } /* Comment */
+.codehilite .err { color: #ED007E; background-color: #1E0010 } /* Error */
+.codehilite .esc { color: #F8F8F2 } /* Escape */
+.codehilite .g { color: #F8F8F2 } /* Generic */
+.codehilite .k { color: #66D9EF } /* Keyword */
+.codehilite .l { color: #AE81FF } /* Literal */
+.codehilite .n { color: #F8F8F2 } /* Name */
+.codehilite .o { color: #FF4689 } /* Operator */
+.codehilite .x { color: #F8F8F2 } /* Other */
+.codehilite .p { color: #F8F8F2 } /* Punctuation */
+.codehilite .ch { color: #959077 } /* Comment.Hashbang */
+.codehilite .cm { color: #959077 } /* Comment.Multiline */
+.codehilite .cp { color: #959077 } /* Comment.Preproc */
+.codehilite .cpf { color: #959077 } /* Comment.PreprocFile */
+.codehilite .c1 { color: #959077 } /* Comment.Single */
+.codehilite .cs { color: #959077 } /* Comment.Special */
+.codehilite .gd { color: #FF4689 } /* Generic.Deleted */
+.codehilite .ge { color: #F8F8F2; font-style: italic } /* Generic.Emph */
+.codehilite .ges { color: #F8F8F2; font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #F8F8F2 } /* Generic.Error */
+.codehilite .gh { color: #F8F8F2 } /* Generic.Heading */
+.codehilite .gi { color: #A6E22E } /* Generic.Inserted */
+.codehilite .go { color: #66D9EF } /* Generic.Output */
+.codehilite .gp { color: #FF4689; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { color: #F8F8F2; font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #959077 } /* Generic.Subheading */
+.codehilite .gt { color: #F8F8F2 } /* Generic.Traceback */
+.codehilite .kc { color: #66D9EF } /* Keyword.Constant */
+.codehilite .kd { color: #66D9EF } /* Keyword.Declaration */
+.codehilite .kn { color: #FF4689 } /* Keyword.Namespace */
+.codehilite .kp { color: #66D9EF } /* Keyword.Pseudo */
+.codehilite .kr { color: #66D9EF } /* Keyword.Reserved */
+.codehilite .kt { color: #66D9EF } /* Keyword.Type */
+.codehilite .ld { color: #E6DB74 } /* Literal.Date */
+.codehilite .m { color: #AE81FF } /* Literal.Number */
+.codehilite .s { color: #E6DB74 } /* Literal.String */
+.codehilite .na { color: #A6E22E } /* Name.Attribute */
+.codehilite .nb { color: #F8F8F2 } /* Name.Builtin */
+.codehilite .nc { color: #A6E22E } /* Name.Class */
+.codehilite .no { color: #66D9EF } /* Name.Constant */
+.codehilite .nd { color: #A6E22E } /* Name.Decorator */
+.codehilite .ni { color: #F8F8F2 } /* Name.Entity */
+.codehilite .ne { color: #A6E22E } /* Name.Exception */
+.codehilite .nf { color: #A6E22E } /* Name.Function */
+.codehilite .nl { color: #F8F8F2 } /* Name.Label */
+.codehilite .nn { color: #F8F8F2 } /* Name.Namespace */
+.codehilite .nx { color: #A6E22E } /* Name.Other */
+.codehilite .py { color: #F8F8F2 } /* Name.Property */
+.codehilite .nt { color: #FF4689 } /* Name.Tag */
+.codehilite .nv { color: #F8F8F2 } /* Name.Variable */
+.codehilite .ow { color: #FF4689 } /* Operator.Word */
+.codehilite .pm { color: #F8F8F2 } /* Punctuation.Marker */
+.codehilite .w { color: #F8F8F2 } /* Text.Whitespace */
+.codehilite .mb { color: #AE81FF } /* Literal.Number.Bin */
+.codehilite .mf { color: #AE81FF } /* Literal.Number.Float */
+.codehilite .mh { color: #AE81FF } /* Literal.Number.Hex */
+.codehilite .mi { color: #AE81FF } /* Literal.Number.Integer */
+.codehilite .mo { color: #AE81FF } /* Literal.Number.Oct */
+.codehilite .sa { color: #E6DB74 } /* Literal.String.Affix */
+.codehilite .sb { color: #E6DB74 } /* Literal.String.Backtick */
+.codehilite .sc { color: #E6DB74 } /* Literal.String.Char */
+.codehilite .dl { color: #E6DB74 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #E6DB74 } /* Literal.String.Doc */
+.codehilite .s2 { color: #E6DB74 } /* Literal.String.Double */
+.codehilite .se { color: #AE81FF } /* Literal.String.Escape */
+.codehilite .sh { color: #E6DB74 } /* Literal.String.Heredoc */
+.codehilite .si { color: #E6DB74 } /* Literal.String.Interpol */
+.codehilite .sx { color: #E6DB74 } /* Literal.String.Other */
+.codehilite .sr { color: #E6DB74 } /* Literal.String.Regex */
+.codehilite .s1 { color: #E6DB74 } /* Literal.String.Single */
+.codehilite .ss { color: #E6DB74 } /* Literal.String.Symbol */
+.codehilite .bp { color: #F8F8F2 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #A6E22E } /* Name.Function.Magic */
+.codehilite .vc { color: #F8F8F2 } /* Name.Variable.Class */
+.codehilite .vg { color: #F8F8F2 } /* Name.Variable.Global */
+.codehilite .vi { color: #F8F8F2 } /* Name.Variable.Instance */
+.codehilite .vm { color: #F8F8F2 } /* Name.Variable.Magic */
+.codehilite .il { color: #AE81FF } /* Literal.Number.Integer.Long */ }
+  .codehilite { border: 1px solid var(--line); border-radius: 10px;
+    overflow-x: auto; margin: 0 0 8px; }
+  .codehilite pre { margin: 0; padding: 12px 16px;
+    font: 13px/1.55 ui-monospace, "SF Mono", Menlo, monospace; }
+  .codehilite code { background: transparent; padding: 0; } /* Inline-code-Stil neutralisieren */
+  /* Farb-Labels: verbinden Code-Abschnitte mit den Diagramm-Blöcken */
+  .codeblock-label { display: inline-block; font-size: 12.5px; font-weight: 600;
+    padding: 3px 12px; margin: 16px 0 0; border-radius: 8px 8px 0 0;
+    background: color-mix(in oklab, var(--ink) 6%, transparent);
+    color: var(--ink-2); border-left: 4px solid var(--ink-3); }
+  .codeblock-label + .codehilite { border-top-left-radius: 0; }
+  .codeblock-label[data-tone="blau"] { border-left-color: #2a78d6; }
+  .codeblock-label[data-tone="rot"] { border-left-color: #d03b3b; }
+  .codeblock-label[data-tone="gelb"] { border-left-color: #fab219; }
+  .codeblock-label[data-tone="gruen"] { border-left-color: #0ca30c; }
+  .codeblock-label[data-tone="blau"] + .codehilite { border-left: 4px solid #2a78d6; }
+  .codeblock-label[data-tone="rot"] + .codehilite { border-left: 4px solid #d03b3b; }
+  .codeblock-label[data-tone="gelb"] + .codehilite { border-left: 4px solid #fab219; }
+  .codeblock-label[data-tone="gruen"] + .codehilite { border-left: 4px solid #0ca30c; }
+  /* Zweispaltige Code-Ansicht: Code links, Erklärnotizen rechts daneben.
+     Bricht aus der Textspalte aus (breiter als main), damit der Code Platz hat. */
+  .code-row { display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 0 20px; align-items: start; margin: 16px 0 8px;
+    width: min(1220px, calc(100vw - 48px));
+    position: relative; left: 50%; transform: translateX(-50%); }
+  .code-row .codeblock-label { margin-top: 0; }
+  .code-notes { font-size: 13.5px; color: var(--ink-2); line-height: 1.55;
+    padding: 30px 0 0 14px; border-left: 1px solid var(--line); }
+  .code-notes ul { margin: 0; padding-left: 16px; }
+  .code-notes li { margin: 0 0 9px; }
+  .code-notes code { font-size: .85em; }
+  @media (max-width: 1000px) {
+    .code-row { grid-template-columns: 1fr; width: auto; left: 0; transform: none; }
+    .code-notes { padding: 6px 0 0; border-left: 0; }
+  }
+  details { background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 16px; margin: 10px 0; }
+  details summary { cursor: pointer; font-weight: 550; }
+  details[open] summary { margin-bottom: 6px; color: var(--accent); }
+  blockquote { border-left: 3px solid var(--accent); margin: 1em 0;
+    padding: 2px 0 2px 14px; color: var(--ink-2); }
+  li { margin: .25em 0; }
+  @media print {
+    body { background: #fff; color: #000; font-size: 12px; }
+    .topnav { display: none; }
+    .code-row { width: auto; left: 0; transform: none; }
+    details { break-inside: avoid; } details:not([open]) summary ~ * { display: block; }
+    pre.mermaid { break-inside: avoid; border: 1px solid #ccc; }
+    h2 { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<nav class="topnav"><div class="inner"><span class="brand">Invoice-to-Approval · Lernseiten</span><a href="poc-walkthrough.html" class="active">POC-Walkthrough</a><a href="skript-atlas.html">Skript-Atlas</a><span class="sep" aria-hidden="true">·</span><a href="atlas-parsers.html">parsers.py</a><a href="atlas-validation.html">validation.py</a><a href="atlas-routing.html">routing.py</a><a href="atlas-run.html">run.py</a><a href="atlas-belegflut.html">belegflut.py</a><a href="atlas-e2e-smoke.html">e2e_smoke.py</a></div></nav>
+<main>
+<h1>POC-Walkthrough: verstehen, durchdringen, erklären</h1>
+<p>Zweck: Du sollst jeden Baustein der Invoice-to-Approval-Kette ("Rechnungseingang
+bis Freigabe") <strong>ohne Spickzettel erklären</strong> können. Pro POC (Proof of Concept:
+Machbarkeitsnachweis, ein kleines lauffähiges Beispiel): Ablauf als Diagramm,
+die Konzepte dahinter, die Zahlen, die man kennen muss, die bewussten Grenzen
+(je mit produktivem Schritt) und eine Sprechfassung. Am Ende: Zahlen-Spickzettel,
+Selbsttest und ein <strong>Glossar</strong>, das alle Abkürzungen und Fachbegriffe
+alphabetisch sammelt. Jeder Begriff wird zusätzlich bei der ersten Nennung kurz
+in Klammern erklärt.</p>
+<p>Diagramme sind Mermaid (ein Werkzeug, das aus Textbeschreibung Diagramme
+zeichnet); GitHub und Obsidian rendern sie direkt.</p>
+<p><strong>Eine Ebene tiefer:</strong> Der <a href="skript-atlas.html">Skript-Atlas</a> öffnet die
+einzelnen Skripte auf Code-Ebene — Eingaben, Verarbeitungsschritte, Variablen,
+Prüfungen, Ausgaben je Datei, mit dem vollständigen Code und Erklärnotizen.
+Alle Seiten sind über die Leiste oben verbunden; in den Diagrammen sind
+Blöcke mit eigener Skript-Seite klickbar.</p>
+<hr />
+<h2>Das große Bild: eine Kette, ein Prinzip</h2>
+<pre class="mermaid">flowchart TD
+    A["POC 01<br/>Process Mining<br/>(Warum? Was zuerst?)"] --> B["POC 02<br/>Invoice-Pipeline<br/>(Parse, Validate, Route)"]
+    B --> C["POC 03<br/>Flowable BPMN+DMN<br/>(risk-tiered Freigabe)"]
+    C --> F["POC 06<br/>Cockpit<br/>(Live-Bedienung)"]
+    D["POC 04<br/>n8n<br/>(Orchestrierung)"] -.verbindet.-> B
+    D -.verbindet.-> C
+    E["POC 05<br/>Claude/LLM<br/>(Extraktion, Klärung)"] -.dockt an.-> B
+</pre>
+<p><strong>Das eine Prinzip, das alles zusammenhält — "risk-tiered autonomy"
+(risikogestaffelte Autonomie: je höher das Risiko, desto weniger darf die
+Maschine allein):</strong> Das LLM (Large Language Model, großes Sprachmodell wie
+Claude) formuliert, extrahiert und schlägt vor. Deterministische Systeme
+(deterministisch: gleiche Eingabe führt immer zum gleichen Ergebnis, ohne
+Zufall) rechnen und buchen. Der Mensch gibt frei, gestaffelt nach Risiko.
+Automatisierung im Finance-Umfeld ist ein Governance-Problem (Governance:
+Regeln, Zuständigkeiten und Kontrollen) mit technischer Komponente, nicht
+umgekehrt.</p>
+<p><strong>Die Arbeitsteilung (Antwort auf "Warum diese Architektur?"):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Verantwortung</th>
+<th>Lebt in</th>
+<th>Warum dort</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Validierung (rechnerische Prüfung)</td>
+<td>Python-Code (Pydantic: Bibliothek, die Daten gegen ein definiertes Schema prüft)</td>
+<td>testbar, versionierbar</td>
+</tr>
+<tr>
+<td>Freigaberegeln</td>
+<td>DMN-Tabelle (Decision Model and Notation: Standard für Entscheidungstabellen)</td>
+<td>fachlich lesbar, vom Fachbereich pflegbar, ändern ohne Software-Deployment</td>
+</tr>
+<tr>
+<td>Prozess + menschliche Arbeitsschritte</td>
+<td>BPMN-Engine Flowable (BPMN: Business Process Model and Notation, Standard für Prozessmodelle; Engine: die Software, die das Modell ausführt)</td>
+<td>Audit-Trail (lückenlose Prüfspur: wer hat wann was entschieden) inklusive; Modell = laufender Prozess</td>
+</tr>
+<tr>
+<td>Orchestrierung (Steuerung des Zusammenspiels)</td>
+<td>n8n (Workflow-Automatisierungswerkzeug)</td>
+<td>verbindet nur, entscheidet nichts; austauschbar</td>
+</tr>
+<tr>
+<td>Unscharfe Ränder (Scans, Formulierungen)</td>
+<td>LLM (Claude)</td>
+<td>extrahieren/formulieren, nie buchen/freigeben</td>
+</tr>
+<tr>
+<td>Bedienung</td>
+<td>Cockpit (FastAPI: Python-Web-Framework; plus JavaScript ohne Zusatz-Framework)</td>
+<td>dünne Schicht über der REST-API der Engine (REST-API: Programmierschnittstelle über das Web-Protokoll HTTP)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>POC 01: Process Mining (PM4Py)</h2>
+<p><strong>Frage, die er beantwortet:</strong> "Wo lohnt Automatisierung, und was zuerst?"
+Datenbasiert statt anekdotisch.</p>
+<p>Process Mining heißt: den realen Prozessablauf aus den digitalen Spuren der
+IT-Systeme rekonstruieren, statt Mitarbeiter zu befragen. PM4Py ist die dafür
+genutzte Python-Bibliothek. Der untersuchte Prozess ist Purchase-to-Pay (P2P:
+von der Bestellung bis zur Bezahlung).</p>
+<pre class="mermaid">flowchart TD
+    G["generate_eventlog.py<br/>synthetischer P2P-Log (Seed 42)"] --> CSV["data/p2p_eventlog.csv<br/>Case-ID, Aktivität, Zeitstempel, Rolle"]
+    CSV --> AN["analyze.py (PM4Py)"]
+    AN --> R1["Varianten-<br/>analyse"]
+    AN --> R2["Bottlenecks<br/>(Wartezeiten)"]
+    AN --> R3["Touch-Analyse<br/>(Stunden, FTE)"]
+    R1 & R2 & R3 --> REP["output/report.md<br/>+ Prozesslandkarten (PNG)"]
+</pre>
+<p><strong>Konzepte, die Du erklären können musst:</strong></p>
+<ul>
+<li><strong>Event-Log</strong> (Ereignisprotokoll): Tabelle aus mindestens Case-ID (Fall-Nummer,
+  hier: der Rechnungsvorgang), Aktivität und Zeitstempel. Aus ERP-Systemen
+  (Enterprise Resource Planning: das zentrale Unternehmenssystem, z. B. SAP) als
+  Datenextrakt gewinnbar, etwa aus Belegfluss-Tabellen.</li>
+<li><strong>Variante:</strong> ein konkreter Pfad durch den Prozess (die Abfolge der
+  Aktivitäten). Wenige Varianten decken meist den Großteil der Fälle ab; die
+  teuren stecken in den Abweichungen.</li>
+<li><strong>Bottleneck</strong> (Engpass): hier gemessen als Wartezeit, bevor eine Aktivität
+  startet. Kernbefund: Liegezeiten entstehen <strong>vor manuellen Schritten</strong>, nicht
+  im System.</li>
+<li><strong>Touch</strong> (manueller Eingriff): ein von Menschen ausgeführtes Ereignis.
+  Touches × angenommene Bearbeitungszeit = gebundene Stunden, daraus die
+  FTE-Schätzung (FTE: Full-Time Equivalent, Vollzeitäquivalent — eine
+  rechnerische Vollzeitstelle).</li>
+<li><strong>Seed 42</strong> (Startwert des Zufallsgenerators): macht die synthetisch erzeugten
+  Daten exakt reproduzierbar — jeder Lauf erzeugt denselben Datensatz.</li>
+</ul>
+<p><strong>Zahlen (synthetischer Log, 6 Monate):</strong> 16.518 Events (Einzelereignisse),
+2.000 Vorgänge. V1 Happy Path (Idealverlauf ohne Störung) 62 % mit 7,1 Tagen;
+V2 Preisabweichung 15 % mit 15,8 Tagen; V3 Mengenabweichung 10 % mit 13,3 Tagen;
+V4 ohne Bestellbezug 10 % mit 4,7 Tagen; Dubletten (doppelt eingereichte
+Rechnungen) 3 %. Abweichungsfälle laufen <strong>2,1-mal länger</strong> (14,8 vs. 7,1 Tage).
+32 % aller Events sind manuelle Touches, zusammen <strong>etwa 0,7 FTE</strong>. Größte
+Wartezeiten: vor "Rechnung empfangen" (5,5 Tage) und "Freigabe Fachbereich"
+(3,1 Tage). Top-Hebel: Rechnungserfassung (32 Stunden/Monat) und
+Preisabweichungsklärung (27 Stunden/Monat).</p>
+<p><strong>Bewusste Grenzen — ehrlich benannt:</strong></p>
+<ul>
+<li>"Der Faktor 2,1 ist auf dem <strong>Mittelwert</strong> gerechnet (arithmetischer
+  Durchschnitt: Summe geteilt durch Anzahl — reagiert stark auf Ausreißer). Auf
+  dem <strong>Median</strong> (der mittlere Wert, wenn man alle Fälle der Größe nach sortiert
+  — robust gegen Ausreißer) ist der Faktor kleiner, die Aussage bleibt. Im
+  Realeinsatz weise ich beides aus."</li>
+<li>"Die FTE-Zahl beruht auf <strong>angenommenen</strong> Bearbeitungszeiten je Touch; real
+  durch Task Mining (automatische Aufzeichnung der Bildschirmarbeit) oder
+  Interviews kalibrieren."</li>
+<li>"Synthetisch mit Seed heißt: reproduzierbar, keine Datenschutzfragen, und die
+  Analyse-Logik überträgt sich eins zu eins auf echte ERP-Extrakte."</li>
+<li>PM4Py ist <strong>AGPL-lizenziert</strong> (Affero General Public License: strenge
+  Open-Source-Lizenz — wer die Bibliothek in ein ausgeliefertes Produkt einbaut,
+  muss den eigenen Quellcode offenlegen). Für interne Analysen unkritisch, bei
+  Einbettung in Produkte Lizenzprüfung; eine kommerzielle Lizenz existiert.</li>
+</ul>
+<p><strong>Sprechfassung:</strong> "Ich habe einen Purchase-to-Pay-Event-Log mit PM4Py
+analysiert: Variantenanalyse, Engpässe, manuelle Eingriffe. Der Befund
+priorisiert die Automatisierung: Abweichungsfälle laufen doppelt so lange, rund
+0,7 Vollzeitstellen hängen in manuellen Schritten, und die zwei größten Hebel
+sind Rechnungserfassung und Abweichungsklärung. Genau diese zwei Hebel
+adressieren die nächsten POCs."</p>
+<hr />
+<h2>POC 02: Invoice-Pipeline (Parse, Validate, Route)</h2>
+<p><strong>Frage, die er beantwortet:</strong> "Wie kommt eine Rechnung sicher vom Eingang zur
+richtigen Entscheidung: dunkel buchen, prüfen lassen oder abweisen?"</p>
+<p>Die drei englischen Schichtnamen bedeuten: <strong>Parse</strong> = die Datei maschinell
+einlesen und in Felder zerlegen, <strong>Validate</strong> = rechnerisch prüfen,
+<strong>Route</strong> = die Entscheidung über den weiteren Weg treffen.</p>
+<pre class="mermaid">flowchart TD
+    IN["Eingang: XML / PDF"] --> P1["1. PARSE<br/>XRechnung UBL · XRechnung CII<br/>ZUGFeRD (XML aus PDF/A-3)<br/>Fallback: Text-Heuristik"]
+    P1 --> V["2. VALIDATE (deterministisch)<br/>V01 Positionssumme = Netto<br/>V02 USt je Satz korrekt<br/>V03 Netto+USt = Brutto<br/>V04 IBAN-Prüfsumme<br/>V05 USt-ID-Prüfung<br/>V06 Pflichtfelder<br/>V07 Datums-Plausibilität"]
+    V --> R["3. ROUTE (Risk-Score)<br/>Dublette? Stammdaten? Währung?<br/>Betrag? Zahlweg? Confidence?<br/>2-/3-Way-Match?"]
+    R --> AUTO["🟢 AUTO_POST<br/>Dunkelbuchung"]
+    R --> REV["🟡 REVIEW<br/>in die Freigabe (POC 03)"]
+    R --> REJ["🔴 REJECT<br/>abgewiesen"]
+    click P1 "atlas-parsers.html" "Skript-Seite: parsers.py"
+    click V "atlas-validation.html" "Skript-Seite: validation.py"
+    click R "atlas-routing.html" "Skript-Seite: routing.py"
+</pre>
+<p><em>Die drei Schichten sind klickbar und führen zur jeweiligen Skript-Seite im
+<a href="skript-atlas.html">Atlas</a>; der Dirigent dazu: <a href="atlas-run.html">run.py</a>.</em></p>
+<p><strong>Konzepte:</strong></p>
+<ul>
+<li><strong>XRechnung:</strong> der deutsche Standard für elektronische Rechnungen, basierend
+  auf der europäischen Norm <strong>EN 16931</strong> (legt die Pflichtinhalte einer
+  E-Rechnung fest). Es gibt ihn in zwei XML-Syntaxen (XML: Extensible Markup
+  Language, ein textbasiertes Datenformat mit Auszeichnungs-Tags): <strong>UBL</strong>
+  (Universal Business Language) und <strong>CII</strong> (Cross Industry Invoice). Gleiche
+  Bedeutung, andere Struktur; die Pipeline liest beide.</li>
+<li><strong>ZUGFeRD</strong> (Zentraler User Guide des Forums elektronische Rechnung
+  Deutschland): hybrides Format — ein PDF/A-3 (PDF-Variante für
+  Langzeitarchivierung, die eingebettete Dateien erlaubt) mit XRechnungs-XML im
+  Inneren. Menschenlesbar und maschinenlesbar in einer Datei.</li>
+<li><strong>Validierungsregeln V01 bis V07:</strong> rechnerische Prüfungen wie "Summe der
+  Positionen = Nettosumme", "Umsatzsteuer (USt) je Steuersatz korrekt
+  gerechnet", <strong>IBAN-Prüfsumme</strong> (IBAN: International Bank Account Number,
+  internationale Kontonummer — sie enthält Kontrollziffern, mit denen sich
+  Zahlendreher mathematisch erkennen lassen) und Prüfung der USt-ID
+  (Umsatzsteuer-Identifikationsnummer). Technisch umgesetzt mit Pydantic und
+  python-stdnum (Bibliothek zur Prüfung standardisierter Nummern).</li>
+<li><strong>Dunkelbuchung:</strong> Buchung komplett ohne menschlichen Eingriff. Nur erlaubt,
+  wenn ALLE Prüfungen bestanden sind; jede einzelne Auffälligkeit verhindert sie.</li>
+<li><strong>2-/3-Way-Match</strong> (Zwei-/Drei-Wege-Abgleich): Rechnung gegen Bestellung
+  (2-way) und zusätzlich gegen den Wareneingang, also die bestätigte Lieferung
+  (3-way). Die Rechnung mag in sich stimmen; erst der Abgleich beweist, dass
+  bestellt und geliefert wurde. Toleranz: der Nettobetrag darf den Bestellwert
+  um maximal 2 % übersteigen.</li>
+</ul>
+<p><strong>Die Routing-Logik im Kern (so funktioniert <code>routing.py</code>):</strong>
+Jeder Befund erzeugt einen Grund und Risikopunkte. <strong>Route = REVIEW, sobald es
+überhaupt einen Grund gibt</strong> (der Punktwert entscheidet nicht über die Route; er
+priorisiert und steuert später die Eskalation in der DMN-Tabelle). Dubletten
+gehen sofort auf REJECT mit dem Maximalwert 100.</p>
+<table>
+<thead>
+<tr>
+<th>Befund</th>
+<th>Punkte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dublette (Lieferant + Rechnungsnummer schon gesehen)</td>
+<td>REJECT, 100</td>
+</tr>
+<tr>
+<td>Validierungsfehler (V-Codes mit Schweregrad "error")</td>
+<td>+40</td>
+</tr>
+<tr>
+<td>IBAN weicht von den Stammdaten ab (Betrugsverdacht: Konto könnte umgeleitet sein)</td>
+<td>+50</td>
+</tr>
+<tr>
+<td>Bestellung gehört zu einem anderen Lieferanten</td>
+<td>+40</td>
+</tr>
+<tr>
+<td>Neuer Lieferant / Bestellnummer unbekannt</td>
+<td>je +30</td>
+</tr>
+<tr>
+<td>Netto über Bestellwert + 2 % Toleranz</td>
+<td>+30</td>
+</tr>
+<tr>
+<td>Wareneingang fehlt (3-Way-Match unvollständig)</td>
+<td>+25</td>
+</tr>
+<tr>
+<td>Extraktions-Confidence unter 0,9 (Confidence: Vertrauenswert zwischen 0 und 1, wie sicher die Felderkennung war)</td>
+<td>+25</td>
+</tr>
+<tr>
+<td>Fremdwährung / Brutto über 10.000 €</td>
+<td>je +20</td>
+</tr>
+<tr>
+<td>Kein Bestellbezug</td>
+<td>+15</td>
+</tr>
+<tr>
+<td>Keine IBAN im Beleg (Zahlweg ungeklärt)</td>
+<td>+10</td>
+</tr>
+<tr>
+<td>je Warnung (Schweregrad "warning")</td>
+<td>+5</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Die 7 Testszenarien:</strong> s1 sauber → AUTO_POST. s2 Summenfehler (CII-Syntax) →
+REVIEW. s3 geänderte IBAN im ZUGFeRD → REVIEW (Betrugs-Check, 50 Punkte). s4
+konsistent, aber 24.990 € → REVIEW (20 Punkte). s5 Dublette von s1 → REJECT.
+s6 Scan ohne XML, Notfall-Extraktion mit Confidence 60 % → REVIEW (75 Punkte).
+s7 in sich konsistent, aber über Bestellwert + Toleranz → REVIEW (3-Way-Match,
+30 Punkte).</p>
+<p><strong>Bewusste Grenzen — ehrlich benannt:</strong></p>
+<ul>
+<li>Die Confidence-Werte (0,6 Text-Heuristik / 0,85 LLM) sind <strong>gesetzte
+  POC-Konstanten</strong>, bewusst unter der 0,9-Schwelle, damit der Ausweichpfad nie
+  dunkelbucht. Produktiv würden sie kalibriert, z. B. aus Logprobs
+  (Log-Wahrscheinlichkeiten: wie sicher sich das Modell bei jedem ausgegebenen
+  Wortbaustein war) oder Feld-Heuristiken. (ehrlich sagen!)</li>
+<li>Das Dubletten-Register lebt in-memory (nur im Arbeitsspeicher, bei Neustart
+  weg); produktiv: ein Idempotenz-Schlüssel (eindeutiger Schlüssel, der die
+  doppelte Verarbeitung desselben Belegs technisch verhindert) in einer
+  Datenbank.</li>
+<li>Der Match läuft gegen Fixtures (fest hinterlegte Testdaten im JSON-Format;
+  JSON: JavaScript Object Notation, ein textbasiertes Datenformat); produktiv
+  ersetzt eine ERP-Anbindung die Fixtures, z. B. über OData (Open Data Protocol:
+  standardisierte Web-Schnittstelle, verbreitet bei SAP).</li>
+<li>Keine vollständige EN-16931-Validierung; produktiv den KoSIT-Validator
+  vorschalten (KoSIT: Koordinierungsstelle für IT-Standards, gibt das offizielle
+  Prüfwerkzeug heraus; es prüft mit Schematron, einer Regelsprache für
+  XML-Dokumente).</li>
+<li>Die 10.000-€-Grenze steht doppelt im System (Pipeline-Code und DMN-Tabelle):
+  <strong>offensiv nutzen</strong> als Governance-Argument — Schwellwerte gehören in die DMN
+  als Single Source of Truth (die eine verbindliche Quelle, aus der alle anderen
+  lesen).</li>
+</ul>
+<p><strong>Sprechfassung:</strong> "Drei Schichten: Einlesen für XRechnung in beiden Syntaxen
+und ZUGFeRD, dann deterministische Validierung von Summen über die
+IBAN-Prüfsumme bis zur Datums-Plausibilität, dann risikogestaffeltes Routing mit
+Dubletten-Check, Stammdaten-Abgleich inklusive IBAN-Betrugs-Check und
+Drei-Wege-Abgleich. Dunkelbuchung nur, wenn alles bestanden ist; jede
+Entscheidung trägt Gründe und eine Risikopunktzahl als Prüfspur. Kein
+Sprachmodell entscheidet über Buchung oder Zahlung."</p>
+<p><strong>Testfundament (seit 2026-07-30):</strong> Alle
+Validierungsregeln (V01–V08) und die komplette Routing-Punktetabelle sind als
+automatisierte Tests abgesichert (33 Tests), inklusive Angriffs-Belegen
+(XXE-Regression, kaputtes XML) und einem End-to-End-Smoke gegen die laufende
+Engine. Jeder Test wurde per Mutation-Beweis geprüft (absichtlich rot gesehen).
+Regressionslauf: <code>uv run pytest</code> · Details: <code>docs/test-checkliste.md</code> ·
+Skript-Seiten der Test-Werkzeuge: <a href="atlas-belegflut.html">belegflut.py</a>,
+<a href="atlas-e2e-smoke.html">e2e_smoke.py</a>.
+Neue Regel V08 (nicht-positive Beträge) entstand test-getrieben aus einem
+Angriffsfall; Befund T1 (Nur-Warnung-Belege werden dunkelgebucht) ist als
+als offene Design-Entscheidung dokumentiert.</p>
+<hr />
+<h2>POC 03: Flowable (BPMN + DMN)</h2>
+<p><strong>Frage, die er beantwortet:</strong> "Wie wird aus der Routing-Entscheidung ein
+auditierbarer Freigabeprozess mit den richtigen Zuständigkeiten?"</p>
+<p>Flowable ist eine Open-Source-Prozess-Engine: eine Software, die
+BPMN-Prozessmodelle und DMN-Entscheidungstabellen nicht nur zeichnet, sondern
+<strong>ausführt</strong>.</p>
+<pre class="mermaid">flowchart TD
+    S(("Start:<br/>Rechnung aus Pipeline")) --> DMN["Service-Task:<br/>Freigabestufe ermitteln (DMN)"]
+    DMN --> GW{"Freigabestufe?"}
+    GW -->|ABGELEHNT| E1(("Ende:<br/>Abgelehnt"))
+    GW -->|AUTO| B["Service-Task:<br/>Dunkelbuchung auslösen"]
+    GW -->|SACHBEARBEITER oder<br/>TEAMLEITUNG| UT["User-Task:<br/>Rechnung prüfen und freigeben<br/>(candidateGroup aus DMN-Ergebnis)"]
+    UT --> GW2{"freigegeben?"}
+    GW2 -->|ja| B
+    GW2 -->|nein| E1
+    B --> E2(("Ende:<br/>Gebucht"))
+</pre>
+<p>Bausteine im Diagramm: <strong>Service-Task</strong> = automatischer Prozessschritt (Software
+erledigt ihn), <strong>User-Task</strong> = menschlicher Arbeitsschritt (wartet auf eine
+Person), <strong>Gateway</strong> (Raute) = Verzweigung nach Bedingung.</p>
+<p><strong>Die DMN-Tabelle <code>freigabestufe</code> (Hit Policy FIRST — Trefferregel "die erste
+passende Zeile gewinnt"):</strong></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Bedingung</th>
+<th>Stufe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>route = REJECT</td>
+<td>ABGELEHNT</td>
+</tr>
+<tr>
+<td>2</td>
+<td>route = AUTO_POST</td>
+<td>AUTO (Dunkelbuchung, kein Mensch)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>riskScore ≥ 50</td>
+<td>TEAMLEITUNG</td>
+</tr>
+<tr>
+<td>4</td>
+<td>brutto &gt; 10.000</td>
+<td>TEAMLEITUNG</td>
+</tr>
+<tr>
+<td>5</td>
+<td>sonst</td>
+<td>SACHBEARBEITER</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Konzepte:</strong></p>
+<ul>
+<li><strong>BPMN ist ausführbare Dokumentation:</strong> das Modell IST der laufende Prozess;
+  Modell und Realität können nicht auseinanderlaufen.</li>
+<li><strong>DMN-Entscheidungstabelle:</strong> Freigabelogik als fachlich lesbare Tabelle.
+  Schwellwert ändern heißt Tabelle ändern, nicht Software neu einspielen
+  ("deployen"). <strong>Hit Policy FIRST:</strong> die Regeln werden von oben nach unten
+  geprüft, die erste passende gewinnt — die Reihenfolge trägt also Bedeutung;
+  deshalb steht REJECT vor AUTO vor den Eskalationsregeln.</li>
+<li><strong>User-Task + candidateGroups</strong> (Kandidaten-Gruppen): der Arbeitsschritt
+  landet in der Warteschlange einer Rolle (Teamleitung oder Sachbearbeitung),
+  dynamisch über eine Expression (kleine im Modell hinterlegte Formel) aus dem
+  DMN-Ergebnis.</li>
+<li><strong>Human-in-the-Loop strukturell erzwungen</strong> (Human-in-the-Loop, kurz HITL:
+  der Mensch bleibt als Kontrollinstanz in der Schleife): oberhalb der Schwellen
+  KANN der Automat nicht buchen. Die Kontrolle liegt in der Prozess-Engine,
+  nicht im Wohlverhalten eines Skripts.</li>
+<li><strong>Historie = Audit-Trail:</strong> jede Aktivität, jede DMN-Ausführung und alle
+  Zeitstempel werden protokolliert — die Basis für IKS (Internes Kontrollsystem:
+  die unternehmensinternen Kontrollen und Regeln) und Revision (interne
+  Prüfinstanz). Ehrliche Grenze im Demo-Stand: Die personenscharfe
+  Bearbeiter-Zuordnung am User-Task (Flowable-"assignee") ist noch nicht
+  gesetzt; entschieden wird unter der abgeleiteten Rolle (Prozessvariable
+  <code>entschiedenVon</code>). Echte Attribution kommt mit Login + assignee (geplant).</li>
+</ul>
+<p><strong>Hands-on-Stolpersteine (zeigen echte Beschäftigung):</strong></p>
+<ul>
+<li>Die REST-Anwendung von Flowable spielt <code>.dmn</code>-Dateien nicht über das
+  Prozess-Deployment mit ein; die DMN-Tabelle muss separat an die DMN-eigene
+  Schnittstelle übergeben werden.</li>
+<li>H2 (leichtgewichtige Java-Datenbank, hier nur im Arbeitsspeicher): Neustart =
+  leere Engine. Für die Demo ideal, produktiv PostgreSQL (verbreitete
+  Produktions-Datenbank).</li>
+</ul>
+<p><strong>Bewusste Grenzen — ehrlich benannt:</strong></p>
+<ul>
+<li>4-Augen-Prinzip (zwei unabhängige Personen müssen prüfen): "Der POC modelliert
+  Zuständigkeit; echtes Vier-Augen ist ein zweiter unabhängiger User-Task mit
+  Rollentrennung ab Schwelle."</li>
+<li>
+<p>Wiedervorlage/Klärungsfall: "genau der Anwendungsfall für CMMN (Case
+  Management Model and Notation: der Schwester-Standard von BPMN für flexible
+  Fallbearbeitung statt festem Ablauf) — bewusster nächster Modellierungsschritt."</p>
+</li>
+<li>
+<p>GoBD (Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern,
+  Aufzeichnungen und Unterlagen in elektronischer Form — die deutschen
+  Archivierungsvorgaben): "Die Flowable-Historie ist Prozess-Audit, kein
+  revisionssicheres Belegarchiv; die 10-Jahres-Ablage ist ein eigener Baustein,
+  ein Dokumentenmanagement- oder Archivsystem (DMS)."</p>
+</li>
+</ul>
+<p><strong>Sprechfassung:</strong> "Die Pipeline liefert Route und Risikopunktzahl, eine
+DMN-Tabelle mit der Trefferregel FIRST macht daraus die Freigabestufe:
+Ablehnung, Dunkelbuchung, Sachbearbeitung oder Teamleitung ab 50 Punkten oder
+über 10.000 Euro. Der menschliche Arbeitsschritt bekommt seine Rolle dynamisch
+aus dem DMN-Ergebnis. Das Entscheidende: Die Freigabelogik ist eine fachlich
+pflegbare Tabelle statt Code, und die Engine erzwingt den Menschen in der
+Schleife strukturell, mit komplettem Audit-Trail."</p>
+<hr />
+<h2>POC 04: n8n (Orchestrierung)</h2>
+<p><strong>Frage, die er beantwortet:</strong> "Was verbindet die Bausteine im Betrieb?"</p>
+<p>n8n ist ein Workflow-Automatisierungswerkzeug: Abläufe werden aus Bausteinen
+("Nodes") zusammengesteckt, die Daten weiterreichen.</p>
+<pre class="mermaid">flowchart TD
+    T["Trigger<br/>(manuell / Zeitplan / Webhook)"] --> EC["Execute Command:<br/>Pipeline ausführen (POC 02)"]
+    EC --> RF["Read File + Extract + Split Out:<br/>results.json → Einzelbelege"]
+    RF --> HTTP["HTTP Request je Beleg:<br/>Flowable-Instanz starten (POC 03)"]
+    HTTP --> SUM["Set:<br/>Lauf-Zusammenfassung"]
+</pre>
+<p>Ein <strong>Trigger</strong> ist der Auslöser des Laufs; ein <strong>Webhook</strong> ist ein
+automatischer Aufruf von außen, sobald irgendwo ein Ereignis eintritt (z. B.
+"neue Datei im Archivsystem").</p>
+<p><strong>Kernsatz zur Arbeitsteilung:</strong> n8n ist hier bewusst <strong>reine Orchestrierung</strong>,
+keine Fachlogik, keine Freigabeentscheidung. Validierung lebt in Python
+(testbar), Regeln in der DMN-Tabelle (fachlich pflegbar), menschliche
+Arbeitsschritte in der BPMN-Engine (auditierbar).</p>
+<p><strong>Konzepte und Gesprächspunkte:</strong></p>
+<ul>
+<li><strong>Lizenz:</strong> n8n ist <strong>fair-code</strong> lizenziert (Quellcode ist offen einsehbar,
+  die Nutzung aber eingeschränkt — konkret: Sustainable Use License). Das ist
+  <strong>kein</strong> Open Source im Sinne der OSI (Open Source Initiative: die
+  Organisation, die definiert, welche Lizenzen als echtes Open Source gelten).
+  Interne Nutzung frei; Einbetten in eigene Produkte oder Weiterverkauf nicht.
+  SSO (Single Sign-on: zentrale Einmal-Anmeldung im Unternehmen), RBAC
+  (Role-Based Access Control: rollenbasierte Zugriffsrechte) und Log-Streaming
+  (laufende Übertragung der Protokolle an zentrale Überwachungssysteme) liegen
+  in der Enterprise-Lizenz; für IKS-relevante Workflows einkalkulieren.</li>
+<li><strong>Headless vs. UI</strong> (headless: ohne grafische Oberfläche; UI: User Interface,
+  die grafische Oberfläche): derselbe Workflow läuft per CLI (Command Line
+  Interface, Kommandozeile) und ist in der Oberfläche visuell editierbar; die
+  JSON-Datei ist das Standard-Austauschformat.</li>
+<li><strong>Der Baustein "Execute Command" setzt Self-Hosting voraus</strong> (Self-Hosting:
+  Betrieb auf eigener Infrastruktur statt in der Cloud des Anbieters); in n8n
+  Cloud ist er nicht verfügbar. Ein bewusstes Argument für den Eigenbetrieb,
+  wenn lokale Skripte automatisiert werden sollen.</li>
+<li>Auslöser im Realbetrieb: Mail-Eingang via IMAP (das Standardprotokoll zum
+  Abrufen von E-Mails), Ordner-Überwachung, Webhook vom Dokumentenmanagement;
+  der Rest des Workflows bleibt identisch.</li>
+</ul>
+<p><strong>Hands-on-Stolpersteine:</strong> lokal braucht n8n Node.js 22 LTS (Node.js: die
+JavaScript-Laufzeitumgebung außerhalb des Browsers; LTS: Long-Term Support,
+Version mit Langzeitpflege), inklusive Neu-Kompilieren des
+sqlite3-Datenbankmoduls (dokumentiert in run_demo.sh). Außerdem muss auf macOS
+die Groß-/Kleinschreibung des Pfads auf die echte Schreibweise gebracht werden,
+weil n8ns Dateizugriffs-Schutzvariable den Pfad buchstabengetreu vergleicht.</p>
+<p><strong>Sprechfassung:</strong> "n8n klammert die Kette: Pipeline ausführen, Ergebnis in
+Einzelbelege zerlegen, je Beleg über die REST-Schnittstelle eine
+Flowable-Instanz starten. Bewusst reine Orchestrierung ohne Fachlogik. Wichtig
+im Enterprise-Kontext: die fair-code-Lizenz und Enterprise-Funktionen wie
+zentrale Anmeldung und Rollenrechte einkalkulieren."</p>
+<hr />
+<h2>POC 05: Claude als LLM-Baustein</h2>
+<p><strong>Frage, die er beantwortet:</strong> "Wo darf ein Sprachmodell in einen
+Finance-Prozess, und wo nicht?"</p>
+<pre class="mermaid">flowchart TB
+    subgraph Demo1["Demo 1: Fallback-Extraktion"]
+        direction TB
+        SCAN["Scan-Text<br/>(kein XML)"] --> LLM1["Claude: Felder als<br/>striktes JSON"]
+        LLM1 --> VAL["DIESELBEN Pydantic-Modelle<br/>+ Regeln aus POC 02"]
+        VAL --> ROUTE["Confidence 0,85 < 0,9<br/>→ bleibt REVIEW"]
+    end
+    subgraph Demo2["Demo 2: Klärungs-Assistent"]
+        direction TB
+        BEF["strukturierte<br/>Pipeline-Befunde"] --> LLM2["Claude: Zusammenfassung<br/>+ Anfrage-ENTWURF"]
+        LLM2 --> HITL["Mensch prüft<br/>und versendet"]
+    end
+</pre>
+<p><strong>Konzepte:</strong></p>
+<ul>
+<li><strong>Grounded generation</strong> (geerdete Generierung): Claude bekommt die
+  strukturierten Befunde als Grundlage und darf keine eigenen Zahlen erfinden.
+  Die Zahlen kommen aus dem System, das Sprachmodell formuliert nur.</li>
+<li><strong>Doppelte Absicherung der Extraktion:</strong> der LLM-Output läuft durch dasselbe
+  Pydantic-Schema und dieselben deterministischen Regeln wie jeder andere Beleg
+  (Summen, IBAN-Prüfsumme, USt-Rechnung). Halluzinierte Beträge (Halluzination:
+  eine vom Modell erfundene, plausibel klingende, aber falsche Angabe) fallen
+  dort auf.</li>
+<li><strong>Confidence-Schwelle:</strong> die LLM-Extraktion bekommt den Vertrauenswert 0,85
+  zugewiesen, liegt damit unter der 0,9-Schwelle — also nie Dunkelbuchung über
+  den Ausweichpfad.</li>
+<li>Merksatz: <strong>LLM-Aufgaben:</strong> extrahieren, zusammenfassen, formulieren,
+  vorschlagen. <strong>Nie:</strong> buchen, freigeben, Zahlen berechnen, Schwellwerte
+  entscheiden. Die Kontrolle liegt in Code und Prozess-Engine, nicht im Prompt
+  (der Eingabetext bzw. die Anweisung an das Modell).</li>
+<li>Technik im POC: Claude läuft headless über den Kommandozeilen-Aufruf
+  <code>claude -p</code>, gestartet als Unterprozess aus Python. Produktiv: die Claude API
+  (Programmierschnittstelle des Herstellers) mit Structured Outputs (erzwungen
+  schema-konforme, maschinenlesbare Antworten) bzw. das Agent SDK (Software
+  Development Kit: Entwicklungsbaukasten für Agenten), Bildverständnis (Vision)
+  für Beleg-Scans, MCP (Model Context Protocol: offener Standard, über den
+  Modelle kontrolliert auf Werkzeuge und Daten zugreifen) für ERP-Abfragen —
+  weiterhin mit Freigabe-Schranken und Mensch in der Schleife. Datenschutz:
+  DSGVO (Datenschutz-Grundverordnung) beachten, also EU-Hosting oder lokales
+  Modell prüfen, bevor echte Belegdaten an eine Cloud-Schnittstelle gehen.</li>
+</ul>
+<p><strong>Warum das der teuerste Hebel ist:</strong> POC 01 zeigt die Abweichungsklärung mit
+durchschnittlich 25 Minuten pro Fall als zweitgrößten manuellen Block; Demo 2
+setzt genau dort an.</p>
+<p><strong>Sprechfassung:</strong> "Zwei Demos: Erstens ersetzt Claude die Text-Heuristik für
+Scans ohne XML, aber der Output läuft durch dieselben deterministischen Regeln
+wie jeder Beleg, und der Vertrauenswert bleibt unter der Dunkelbuchungs-Schwelle.
+Zweitens entwirft Claude aus den strukturierten Befunden die Lieferanten-Anfrage
+für die Abweichungsklärung, den teuersten manuellen Schritt aus dem Mining.
+Beides nach demselben Prinzip: Das Sprachmodell sitzt zwischen deterministischen
+Schichten, nie an deren Stelle."</p>
+<hr />
+<h2>POC 06: Freigabe-Cockpit (Stufe A + B)</h2>
+<p><strong>Frage, die er beantwortet:</strong> "Wie sieht das für die Sachbearbeitung aus?"</p>
+<pre class="mermaid">flowchart TD
+    BR["Browser<br/>Vanilla HTML/CSS/JS<br/>Posteingang · Freigaben · Auswertung · Audit"] -->|"/api/queue<br/>/api/tasks/id/complete<br/>/api/history · /api/mining"| PX["FastAPI-Proxy<br/>(server.py)"]
+    PX -->|"REST, Basic Auth<br/>(nur serverseitig)"| FL["Flowable-Engine<br/>runtime/tasks · history"]
+    PX -->|"Anreicherung"| J["results.json (POC 02)<br/>Join über Quelldatei"]
+</pre>
+<ul>
+<li><strong>Stufe A:</strong> statisch generiertes Dashboard (Übersichtsseite) aus den
+  gespeicherten POC-Ergebnissen, offline vorführbar.</li>
+<li><strong>Stufe B:</strong> echte Bedienung. Freigeben/Ablehnen aus der Oberfläche, der
+  Arbeitsschritt verschwindet live aus der Warteschlange, der Audit-Trail
+  wächst sichtbar.</li>
+</ul>
+<p><strong>Architektur-Entscheidungen, die Du begründen können musst:</strong></p>
+<ul>
+<li><strong>Warum ein Proxy</strong> (Zwischenserver, der Anfragen entgegennimmt und
+  kontrolliert weiterreicht)? Er hält die Zugangsdaten der Engine aus dem
+  Browser heraus (im POC nutzt die Engine Basic Auth: einfache Anmeldung mit
+  Nutzername und Passwort bei jeder Anfrage), liefert die Oberfläche vom selben
+  Server aus wie die Daten ("same-origin" — dadurch greift CORS gar nicht erst;
+  CORS: Cross-Origin Resource Sharing, die Browser-Schutzregel für Zugriffe auf
+  fremde Server) und reichert die Arbeitsschritte um die Beleg-Daten an.
+  Produktiv wäre der Proxy der Platz für zentrale Anmeldung (SSO),
+  Rollenprüfung und Rate-Limits (Mengenbegrenzung von Anfragen).</li>
+<li><strong>Join über die Quelldatei, nicht die Belegnummer</strong> (Join: das Zusammenführen
+  zweier Datenquellen über einen gemeinsamen Schlüssel): die Belegnummer ist
+  wegen des Dubletten-Falls (s5 = Kopie von s1) nicht eindeutig, der Dateiname
+  schon.</li>
+<li><strong>Kommentar-Pflicht bei Ablehnung</strong>, im Browser UND am Server geprüft: der
+  Kommentar ist Teil des Audit-Trails (Governance im Kleinen).</li>
+<li><strong>Das Seed-Skript lässt die Arbeitsschritte offen:</strong> anders als die
+  POC-03-Demo entscheidet nichts automatisch; die 5 Prüf-Fälle warten in der
+  Warteschlange auf echte Bedienung. (Hinweis: "Seed" heißt hier "die Demo
+  bestücken" — nicht zu verwechseln mit dem Zufalls-Seed aus POC 01.)</li>
+</ul>
+<p><strong>Ehrliche Einordnung:</strong> "Das Cockpit bedient die
+Flowable-Warteschlange live. Rollen sind im Demo-Umfang abgeleitet statt
+authentifiziert (die Anwendung schließt aus der DMN-Stufe auf die Rolle, statt
+den Benutzer per Anmeldung zu prüfen); zentrale Anmeldung wäre der nächste
+Baustein."</p>
+<hr />
+<h2>Zahlen-Spickzettel</h2>
+<table>
+<thead>
+<tr>
+<th>Zahl</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16.518 / 2.000</td>
+<td>Events (Einzelereignisse) / Rechnungsvorgänge im Mining-Log (6 Monate, Zufalls-Seed 42)</td>
+</tr>
+<tr>
+<td>2,1× (14,8 vs. 7,1 Tage)</td>
+<td>Abweichungsfälle vs. Happy Path (Idealverlauf), auf dem Mittelwert gerechnet</td>
+</tr>
+<tr>
+<td>62 %</td>
+<td>Anteil Happy Path (Variante V1)</td>
+</tr>
+<tr>
+<td>32 % / ~0,7 FTE</td>
+<td>Anteil manueller Eingriffe / gebundene Vollzeitstellen-Äquivalente</td>
+</tr>
+<tr>
+<td>32 + 27 Stunden/Monat</td>
+<td>größte manuelle Blöcke: Rechnungserfassung + Preisabweichungsklärung</td>
+</tr>
+<tr>
+<td>25 Minuten</td>
+<td>durchschnittliche Abweichungsklärung je Fall (Ansatzpunkt für POC 05, Demo 2)</td>
+</tr>
+<tr>
+<td>7 Belege: 1× AUTO, 5× REVIEW, 1× REJECT</td>
+<td>Pipeline-Testszenarien s1 bis s7</td>
+</tr>
+<tr>
+<td>10.000 €</td>
+<td>Dunkelbuchungs-/Eskalationsgrenze (steht bewusst doppelt: Code + DMN-Tabelle)</td>
+</tr>
+<tr>
+<td>Risikopunkte ≥ 50</td>
+<td>DMN-Eskalation zur Teamleitung</td>
+</tr>
+<tr>
+<td>0,9 / 0,85 / 0,6</td>
+<td>Vertrauensschwelle für Dunkelbuchung / LLM-Extraktion / Text-Heuristik</td>
+</tr>
+<tr>
+<td>2 %</td>
+<td>Toleranz beim Drei-Wege-Abgleich (Netto vs. Bestellwert)</td>
+</tr>
+<tr>
+<td>7.2.0</td>
+<td>Version der Flowable-Engine</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>Selbsttest (erst antworten, dann aufklappen)</h2>
+<details>
+<summary>1. Warum landet s4 (24.990 €, in sich fehlerfrei) bei der Teamleitung?</summary>
+<p>Zwei Stufen: Die Pipeline routet auf REVIEW, weil der Bruttobetrag über der
+10.000-€-Dunkelbuchungsgrenze liegt (+20 Risikopunkte). In der DMN-Tabelle zieht
+Regel 4 (brutto &gt; 10.000 → TEAMLEITUNG), obwohl die Punktzahl nur 20 ist.</p>
+</details>
+<details>
+<summary>2. Was ist der Unterschied zwischen Route und Risk-Score?</summary>
+<p>Die Route (AUTO_POST/REVIEW/REJECT) entscheidet, OB ein Mensch draufschaut;
+schon ein einziger Grund erzwingt REVIEW. Die Risikopunktzahl misst, wie
+kritisch der Fall ist, und steuert die Eskalationsstufe in der DMN-Tabelle
+(ab 50 Punkten → Teamleitung).</p>
+</details>
+<details>
+<summary>3. Warum Hit Policy FIRST in der DMN, und warum steht REJECT oben?</summary>
+<p>FIRST heißt: die erste passende Regel gewinnt, die Reihenfolge trägt also
+Bedeutung. REJECT und AUTO_POST müssen vor den Eskalationsregeln stehen, sonst
+würde z. B. eine Dublette mit 100 Punkten fälschlich als Teamleitungs-Aufgabe
+landen.</p>
+</details>
+<details>
+<summary>4. Wie verhindert die Kette, dass ein halluzinierter Betrag gebucht wird?</summary>
+<p>Dreifach: (1) Das LLM-Extrakt läuft durch dieselben deterministischen Regeln
+(Summen, IBAN-Prüfsumme, USt-Rechnung), (2) der Vertrauenswert 0,85 liegt unter
+der 0,9-Schwelle, also nie AUTO_POST, (3) die Prozess-Engine erzwingt oberhalb
+der Schwellen einen menschlichen Arbeitsschritt.</p>
+</details>
+<details>
+<summary>5. Warum ist der 3-Way-Match nötig, wenn die Rechnung rechnerisch stimmt?</summary>
+<p>Interne Konsistenz beweist nicht, dass bestellt und geliefert wurde. Erst der
+Abgleich gegen Bestellung (Preis, Lieferant) und Wareneingang schützt vor
+gefälschten Rechnungen und Überfakturierung (mehr berechnen als bestellt). s7
+demonstriert das: in sich fehlerfrei, aber über Bestellwert + 2 % → REVIEW.</p>
+</details>
+<details>
+<summary>6. XRechnung UBL vs. CII vs. ZUGFeRD in einem Satz?</summary>
+<p>UBL und CII sind zwei XML-Syntaxen für dieselben Inhalte nach der europäischen
+Rechnungsnorm EN 16931; ZUGFeRD ist ein PDF/A-3 mit demselben eingebetteten
+XML, also menschen- und maschinenlesbar zugleich.</p>
+</details>
+<details>
+<summary>7. Warum entscheidet n8n nichts?</summary>
+<p>Bewusste Arbeitsteilung: Orchestrierung ist austauschbar und schwer testbar,
+also gehört Fachlogik nicht hinein. Validierung in Python (testbar), Regeln in
+der DMN-Tabelle (fachlich pflegbar), menschliche Arbeitsschritte in der
+BPMN-Engine (auditierbar). n8n verbindet nur.</p>
+</details>
+<details>
+<summary>8. Was antwortest Du auf "Ihr Cockpit hat ja gar kein Login"?</summary>
+<p>"Bewusste Grenze des Demo-Umfangs: Rollen sind abgeleitet statt authentifiziert.
+Der Proxy ist genau der Platz, an dem produktiv zentrale Anmeldung (SSO/OAuth)
+und Rollenprüfung sitzen; die Zugangsdaten der Engine sind heute schon
+serverseitig gekapselt."</p>
+</details>
+<details>
+<summary>9. Warum sind Confidence-Werte im POC Konstanten, und ist das ein Problem?</summary>
+<p>Ehrlich benennen: gesetzte Werte (0,6 Text-Heuristik, 0,85 LLM), bewusst unter
+der 0,9-Schwelle, damit der Ausweichpfad nie dunkelbucht. Produktiv werden sie
+kalibriert, z. B. aus den Wahrscheinlichkeitswerten des Modells. Kein Problem,
+solange man es nicht als Messung verkauft.</p>
+</details>
+<details>
+<summary>10. Wieso steht die 10.000-€-Grenze doppelt im System, und warum ist das eine gute Antwort?</summary>
+<p>Sie steht im Pipeline-Code UND in der DMN-Tabelle. Offensiv nutzen: "Genau
+deshalb gehören Schwellwerte in die DMN als die eine verbindliche Quelle
+(Single Source of Truth), aus der die Pipeline liest. Das ist das
+Governance-Argument für DMN aus meinem eigenen POC."</p>
+</details>
+<hr />
+<h2>Glossar (alphabetisch)</h2>
+<table>
+<thead>
+<tr>
+<th>Begriff</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AGPL</td>
+<td>Affero General Public License: strenge Open-Source-Lizenz; wer die Software in ausgelieferte Produkte einbaut, muss eigenen Quellcode offenlegen</td>
+</tr>
+<tr>
+<td>API</td>
+<td>Application Programming Interface: Programmierschnittstelle, über die Programme miteinander sprechen</td>
+</tr>
+<tr>
+<td>Audit-Trail</td>
+<td>lückenlose Prüfspur: wer hat wann was entschieden und getan</td>
+</tr>
+<tr>
+<td>Basic Auth</td>
+<td>einfache Anmeldung mit Nutzername/Passwort bei jeder Anfrage</td>
+</tr>
+<tr>
+<td>BPMN</td>
+<td>Business Process Model and Notation: Standard, um Prozesse zu modellieren — und (mit einer Engine) direkt auszuführen</td>
+</tr>
+<tr>
+<td>Case-ID</td>
+<td>Fall-Nummer im Event-Log; hier: ein Rechnungsvorgang</td>
+</tr>
+<tr>
+<td>CII</td>
+<td>Cross Industry Invoice: eine der zwei XML-Syntaxen der XRechnung</td>
+</tr>
+<tr>
+<td>CLI</td>
+<td>Command Line Interface: Bedienung über die Kommandozeile statt grafischer Oberfläche</td>
+</tr>
+<tr>
+<td>CMMN</td>
+<td>Case Management Model and Notation: Standard für flexible Fallbearbeitung (Schwester von BPMN)</td>
+</tr>
+<tr>
+<td>Confidence</td>
+<td>Vertrauenswert zwischen 0 und 1: wie sicher die automatische Felderkennung war</td>
+</tr>
+<tr>
+<td>CORS</td>
+<td>Cross-Origin Resource Sharing: Browser-Schutzregel für Datenzugriffe auf fremde Server</td>
+</tr>
+<tr>
+<td>Deployment</td>
+<td>das Einspielen von Software oder Modellen auf ein laufendes System</td>
+</tr>
+<tr>
+<td>Deterministisch</td>
+<td>gleiche Eingabe führt immer zum gleichen Ergebnis, ohne Zufall</td>
+</tr>
+<tr>
+<td>DMN</td>
+<td>Decision Model and Notation: Standard für Entscheidungstabellen, die eine Engine direkt ausführt</td>
+</tr>
+<tr>
+<td>DMS</td>
+<td>Dokumentenmanagementsystem: Software zur Ablage und revisionssicheren Archivierung von Dokumenten</td>
+</tr>
+<tr>
+<td>DSGVO</td>
+<td>Datenschutz-Grundverordnung: das europäische Datenschutzrecht</td>
+</tr>
+<tr>
+<td>Dunkelbuchung</td>
+<td>Buchung komplett ohne menschlichen Eingriff</td>
+</tr>
+<tr>
+<td>EN 16931</td>
+<td>europäische Norm, die die Pflichtinhalte elektronischer Rechnungen festlegt</td>
+</tr>
+<tr>
+<td>Engine</td>
+<td>Software, die Modelle (BPMN/DMN) nicht nur speichert, sondern ausführt</td>
+</tr>
+<tr>
+<td>ERP</td>
+<td>Enterprise Resource Planning: zentrales Unternehmenssystem für Finanzen, Einkauf, Logistik (z. B. SAP)</td>
+</tr>
+<tr>
+<td>Event-Log</td>
+<td>Ereignisprotokoll: Tabelle aus Fall, Aktivität und Zeitstempel; Rohstoff des Process Mining</td>
+</tr>
+<tr>
+<td>Fair-code</td>
+<td>Quellcode offen einsehbar, Nutzung aber eingeschränkt; kein Open Source im OSI-Sinn</td>
+</tr>
+<tr>
+<td>FastAPI</td>
+<td>Python-Framework zum Bau von Web-Schnittstellen</td>
+</tr>
+<tr>
+<td>Fixtures</td>
+<td>fest hinterlegte Testdaten, die im Test/POC ein echtes System ersetzen</td>
+</tr>
+<tr>
+<td>FTE</td>
+<td>Full-Time Equivalent, Vollzeitäquivalent: rechnerische Vollzeitstelle</td>
+</tr>
+<tr>
+<td>Gateway</td>
+<td>Verzweigung im BPMN-Prozess (Raute): der Weg hängt von einer Bedingung ab</td>
+</tr>
+<tr>
+<td>GoBD</td>
+<td>deutsche Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern und Unterlagen in elektronischer Form</td>
+</tr>
+<tr>
+<td>Governance</td>
+<td>Regeln, Zuständigkeiten und Kontrollen, unter denen Technik betrieben wird</td>
+</tr>
+<tr>
+<td>Grounded generation</td>
+<td>geerdete Generierung: das Sprachmodell formuliert nur aus vorgegebenen Daten, erfindet keine eigenen</td>
+</tr>
+<tr>
+<td>H2</td>
+<td>leichtgewichtige Java-Datenbank; im POC nur im Arbeitsspeicher betrieben</td>
+</tr>
+<tr>
+<td>Halluzination</td>
+<td>vom Sprachmodell erfundene, plausibel klingende, aber falsche Angabe</td>
+</tr>
+<tr>
+<td>Happy Path</td>
+<td>der Idealverlauf eines Prozesses ohne Störungen oder Abweichungen</td>
+</tr>
+<tr>
+<td>Headless</td>
+<td>Betrieb ohne grafische Oberfläche, gesteuert über Kommandozeile oder Schnittstellen</td>
+</tr>
+<tr>
+<td>Hit Policy FIRST</td>
+<td>Trefferregel einer DMN-Tabelle: die erste passende Zeile gewinnt, Reihenfolge trägt Bedeutung</td>
+</tr>
+<tr>
+<td>HITL</td>
+<td>Human-in-the-Loop: der Mensch bleibt als Kontrollinstanz in der Schleife</td>
+</tr>
+<tr>
+<td>IBAN</td>
+<td>International Bank Account Number: internationale Kontonummer mit eingebauten Kontrollziffern (Prüfsumme)</td>
+</tr>
+<tr>
+<td>IDP</td>
+<td>Intelligent Document Processing: KI-gestützte Dokumentenerfassung</td>
+</tr>
+<tr>
+<td>IKS</td>
+<td>Internes Kontrollsystem: die unternehmensinternen Kontrollen und Regeln, u. a. für die Rechnungslegung</td>
+</tr>
+<tr>
+<td>IMAP</td>
+<td>Standardprotokoll zum Abrufen von E-Mails</td>
+</tr>
+<tr>
+<td>In-Memory</td>
+<td>nur im Arbeitsspeicher gehalten; bei Neustart verloren</td>
+</tr>
+<tr>
+<td>Idempotenz-Schlüssel</td>
+<td>eindeutiger Schlüssel, der die doppelte Verarbeitung desselben Vorgangs technisch verhindert</td>
+</tr>
+<tr>
+<td>Join</td>
+<td>Zusammenführen zweier Datenquellen über einen gemeinsamen Schlüssel</td>
+</tr>
+<tr>
+<td>JSON</td>
+<td>JavaScript Object Notation: textbasiertes Datenformat für strukturierte Daten</td>
+</tr>
+<tr>
+<td>KoSIT</td>
+<td>Koordinierungsstelle für IT-Standards: gibt u. a. den offiziellen XRechnungs-Validator heraus</td>
+</tr>
+<tr>
+<td>LLM</td>
+<td>Large Language Model: großes Sprachmodell (z. B. Claude)</td>
+</tr>
+<tr>
+<td>Logprobs</td>
+<td>Log-Wahrscheinlichkeiten: wie sicher sich das Modell bei jedem ausgegebenen Wortbaustein war</td>
+</tr>
+<tr>
+<td>LTS</td>
+<td>Long-Term Support: Software-Version mit garantierter Langzeitpflege</td>
+</tr>
+<tr>
+<td>MCP</td>
+<td>Model Context Protocol: offener Standard, über den Sprachmodelle kontrolliert Werkzeuge und Daten ansprechen</td>
+</tr>
+<tr>
+<td>Median</td>
+<td>der mittlere Wert, wenn man alle Fälle der Größe nach sortiert; robust gegen Ausreißer</td>
+</tr>
+<tr>
+<td>Mermaid</td>
+<td>Werkzeug, das aus Textbeschreibungen Diagramme zeichnet</td>
+</tr>
+<tr>
+<td>Mittelwert</td>
+<td>arithmetischer Durchschnitt (Summe geteilt durch Anzahl); reagiert empfindlich auf Ausreißer</td>
+</tr>
+<tr>
+<td>Node.js</td>
+<td>JavaScript-Laufzeitumgebung außerhalb des Browsers; Basis von n8n</td>
+</tr>
+<tr>
+<td>OData</td>
+<td>Open Data Protocol: standardisierte Web-Schnittstelle für Datenzugriff, verbreitet bei SAP</td>
+</tr>
+<tr>
+<td>Orchestrierung</td>
+<td>Steuerung des Zusammenspiels mehrerer Systeme/Schritte</td>
+</tr>
+<tr>
+<td>OSI</td>
+<td>Open Source Initiative: definiert, welche Lizenzen als echtes Open Source gelten</td>
+</tr>
+<tr>
+<td>P2P</td>
+<td>Purchase-to-Pay: der Prozess von der Bestellung bis zur Bezahlung</td>
+</tr>
+<tr>
+<td>Parse / Parsing</td>
+<td>eine Datei maschinell einlesen und in ihre Bestandteile/Felder zerlegen</td>
+</tr>
+<tr>
+<td>PDF/A-3</td>
+<td>PDF-Variante für Langzeitarchivierung, die eingebettete Dateien (z. B. XML) erlaubt</td>
+</tr>
+<tr>
+<td>PM4Py</td>
+<td>Python-Bibliothek für Process Mining</td>
+</tr>
+<tr>
+<td>POC</td>
+<td>Proof of Concept: Machbarkeitsnachweis, ein kleines lauffähiges Beispiel</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>verbreitete Produktions-Datenbank (Open Source)</td>
+</tr>
+<tr>
+<td>Process Mining</td>
+<td>Prozessanalyse aus den digitalen Spuren der IT-Systeme statt aus Befragungen</td>
+</tr>
+<tr>
+<td>Prompt</td>
+<td>Eingabetext bzw. Anweisung an ein Sprachmodell</td>
+</tr>
+<tr>
+<td>Proxy</td>
+<td>Zwischenserver, der Anfragen entgegennimmt, kontrolliert und weiterreicht</td>
+</tr>
+<tr>
+<td>Prüfsumme</td>
+<td>eingebaute Kontrollziffern (z. B. in der IBAN), mit denen sich Tippfehler mathematisch erkennen lassen</td>
+</tr>
+<tr>
+<td>Pydantic</td>
+<td>Python-Bibliothek, die Daten gegen ein definiertes Schema prüft</td>
+</tr>
+<tr>
+<td>Queue</td>
+<td>Warteschlange (hier: offene Arbeitsschritte einer Rolle)</td>
+</tr>
+<tr>
+<td>Rate-Limit</td>
+<td>Mengenbegrenzung von Anfragen pro Zeiteinheit</td>
+</tr>
+<tr>
+<td>RBAC</td>
+<td>Role-Based Access Control: rollenbasierte Zugriffsrechte</td>
+</tr>
+<tr>
+<td>Regex</td>
+<td>regulärer Ausdruck: formales Suchmuster für Text</td>
+</tr>
+<tr>
+<td>REST(-API)</td>
+<td>Programmierschnittstelle über das Web-Protokoll HTTP</td>
+</tr>
+<tr>
+<td>Risk-Score</td>
+<td>Risikopunktzahl (hier 0 bis 100), die Befunde aufsummiert und die Eskalation steuert</td>
+</tr>
+<tr>
+<td>Same-Origin</td>
+<td>Seite und Daten kommen vom selben Server; dadurch greifen CORS-Beschränkungen nicht</td>
+</tr>
+<tr>
+<td>Schematron</td>
+<td>Regelsprache zur inhaltlichen Prüfung von XML-Dokumenten</td>
+</tr>
+<tr>
+<td>SDK</td>
+<td>Software Development Kit: Entwicklungsbaukasten eines Herstellers</td>
+</tr>
+<tr>
+<td>Seed</td>
+<td>Startwert eines Zufallsgenerators; macht Zufallsdaten reproduzierbar (POC 06: Name des Skripts, das die Demo bestückt)</td>
+</tr>
+<tr>
+<td>Self-Hosting</td>
+<td>Betrieb von Software auf eigener Infrastruktur statt in der Anbieter-Cloud</td>
+</tr>
+<tr>
+<td>Service-Task</td>
+<td>automatischer Prozessschritt in BPMN (Software erledigt ihn)</td>
+</tr>
+<tr>
+<td>Single Source of Truth</td>
+<td>die eine verbindliche Quelle, aus der alle anderen Systeme lesen</td>
+</tr>
+<tr>
+<td>sqlite3</td>
+<td>kleine, in Programme eingebettete Datenbank</td>
+</tr>
+<tr>
+<td>SSO</td>
+<td>Single Sign-on: zentrale Einmal-Anmeldung im Unternehmen</td>
+</tr>
+<tr>
+<td>Structured Outputs</td>
+<td>erzwungen schema-konforme, maschinenlesbare Antworten eines Sprachmodells</td>
+</tr>
+<tr>
+<td>Task Mining</td>
+<td>automatische Aufzeichnung der Arbeit am Bildschirm zur Kalibrierung von Bearbeitungszeiten</td>
+</tr>
+<tr>
+<td>Touch</td>
+<td>manueller Eingriff: ein von Menschen ausgeführtes Prozessereignis</td>
+</tr>
+<tr>
+<td>Trigger</td>
+<td>Auslöser eines Workflow-Laufs</td>
+</tr>
+<tr>
+<td>UBL</td>
+<td>Universal Business Language: eine der zwei XML-Syntaxen der XRechnung</td>
+</tr>
+<tr>
+<td>UI</td>
+<td>User Interface: grafische Benutzeroberfläche</td>
+</tr>
+<tr>
+<td>User-Task</td>
+<td>menschlicher Arbeitsschritt in BPMN; wartet auf eine Person</td>
+</tr>
+<tr>
+<td>USt / USt-ID</td>
+<td>Umsatzsteuer / Umsatzsteuer-Identifikationsnummer</td>
+</tr>
+<tr>
+<td>Validierung</td>
+<td>rechnerische bzw. regelbasierte Prüfung von Daten</td>
+</tr>
+<tr>
+<td>Variante</td>
+<td>ein konkreter Pfad durch den Prozess (Abfolge der Aktivitäten)</td>
+</tr>
+<tr>
+<td>Webhook</td>
+<td>automatischer HTTP-Aufruf von außen, sobald ein Ereignis eintritt</td>
+</tr>
+<tr>
+<td>XML</td>
+<td>Extensible Markup Language: textbasiertes Datenformat mit Auszeichnungs-Tags</td>
+</tr>
+<tr>
+<td>XRechnung</td>
+<td>deutscher Standard für elektronische Rechnungen auf Basis der EN 16931</td>
+</tr>
+<tr>
+<td>ZUGFeRD</td>
+<td>Zentraler User Guide des Forums elektronische Rechnung Deutschland: hybrides Rechnungsformat (PDF + eingebettetes XML)</td>
+</tr>
+<tr>
+<td>Ø</td>
+<td>Zeichen für "Durchschnitt" (Mittelwert)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+</main>
+<script src="mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: "loose",  /* erlaubt click-Links in Diagrammen */
+    theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral",
+    themeVariables: { fontSize: "16px",
+      fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' },
+    flowchart: { htmlLabels: true, curve: "basis", useMaxWidth: false }
+  });
+</script>
+</body>
+</html>

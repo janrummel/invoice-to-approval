@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>routing.py — das risikogestaffelte Routing (Schicht 3 der Pipeline)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --surface: #fcfcfb; --card: #ffffff; --line: #e4e3df;
+    --ink: #1b1b1a; --ink-2: #52514e; --ink-3: #8a897f; --accent: #2a78d6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --surface: #1a1a19; --card: #232322; --line: #3a3936;
+             --ink: #f2f1ec; --ink-2: #c3c2b7; --ink-3: #8a897f; --accent: #3987e5; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--ink);
+         font: 16px/1.65 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .topnav { position: sticky; top: 0; z-index: 10; background: var(--surface);
+    border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .topnav .inner { max-width: 1220px; margin: 0 auto; padding: 9px 24px;
+    display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: center; }
+  .topnav .brand { font-weight: 650; color: var(--ink); margin-right: 10px; }
+  .topnav a { color: var(--ink-2); text-decoration: none; padding: 2px 9px;
+    border-radius: 999px; }
+  .topnav a:hover { background: color-mix(in oklab, var(--ink) 6%, transparent); }
+  .topnav a.active { color: var(--accent); font-weight: 650;
+    background: color-mix(in oklab, var(--accent) 12%, transparent); }
+  .topnav .sep { color: var(--ink-3); }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1 { font-size: 28px; line-height: 1.25; margin: 0 0 10px; }
+  h2 { font-size: 21px; margin: 2.2em 0 .6em; padding-top: .6em;
+        border-top: 1px solid var(--line); }
+  h1 + p, h2 + p { margin-top: 0; }
+  strong { font-weight: 650; }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 2em 0; }
+  a { color: var(--accent); }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .88em;
+         background: color-mix(in oklab, var(--ink) 7%, transparent);
+         padding: 1px 5px; border-radius: 5px; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14.5px; }
+  th { text-align: left; color: var(--ink-3); font-weight: 550; font-size: 12.5px; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  pre.mermaid { background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px; text-align: center; overflow-x: auto; }
+  pre.mermaid svg { max-width: none; } /* nicht herunterskalieren — Schrift bleibt lesbar */
+  /* Syntax-Highlighting (Pygments) — hell/dunkel getrennt */
+  pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #ffffcc }
+.codehilite { background: #f8f8f8; }
+.codehilite .c { color: #3D7B7B; font-style: italic } /* Comment */
+.codehilite .err { border: 1px solid #F00 } /* Error */
+.codehilite .k { color: #008000; font-weight: bold } /* Keyword */
+.codehilite .o { color: #666 } /* Operator */
+.codehilite .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+.codehilite .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+.codehilite .cp { color: #9C6500 } /* Comment.Preproc */
+.codehilite .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+.codehilite .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+.codehilite .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+.codehilite .gd { color: #A00000 } /* Generic.Deleted */
+.codehilite .ge { font-style: italic } /* Generic.Emph */
+.codehilite .ges { font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #E40000 } /* Generic.Error */
+.codehilite .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+.codehilite .gi { color: #008400 } /* Generic.Inserted */
+.codehilite .go { color: #717171 } /* Generic.Output */
+.codehilite .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+.codehilite .gt { color: #04D } /* Generic.Traceback */
+.codehilite .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+.codehilite .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+.codehilite .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+.codehilite .kp { color: #008000 } /* Keyword.Pseudo */
+.codehilite .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+.codehilite .kt { color: #B00040 } /* Keyword.Type */
+.codehilite .m { color: #666 } /* Literal.Number */
+.codehilite .s { color: #BA2121 } /* Literal.String */
+.codehilite .na { color: #687822 } /* Name.Attribute */
+.codehilite .nb { color: #008000 } /* Name.Builtin */
+.codehilite .nc { color: #00F; font-weight: bold } /* Name.Class */
+.codehilite .no { color: #800 } /* Name.Constant */
+.codehilite .nd { color: #A2F } /* Name.Decorator */
+.codehilite .ni { color: #717171; font-weight: bold } /* Name.Entity */
+.codehilite .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+.codehilite .nf { color: #00F } /* Name.Function */
+.codehilite .nl { color: #767600 } /* Name.Label */
+.codehilite .nn { color: #00F; font-weight: bold } /* Name.Namespace */
+.codehilite .nt { color: #008000; font-weight: bold } /* Name.Tag */
+.codehilite .nv { color: #19177C } /* Name.Variable */
+.codehilite .ow { color: #A2F; font-weight: bold } /* Operator.Word */
+.codehilite .w { color: #BBB } /* Text.Whitespace */
+.codehilite .mb { color: #666 } /* Literal.Number.Bin */
+.codehilite .mf { color: #666 } /* Literal.Number.Float */
+.codehilite .mh { color: #666 } /* Literal.Number.Hex */
+.codehilite .mi { color: #666 } /* Literal.Number.Integer */
+.codehilite .mo { color: #666 } /* Literal.Number.Oct */
+.codehilite .sa { color: #BA2121 } /* Literal.String.Affix */
+.codehilite .sb { color: #BA2121 } /* Literal.String.Backtick */
+.codehilite .sc { color: #BA2121 } /* Literal.String.Char */
+.codehilite .dl { color: #BA2121 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+.codehilite .s2 { color: #BA2121 } /* Literal.String.Double */
+.codehilite .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+.codehilite .sh { color: #BA2121 } /* Literal.String.Heredoc */
+.codehilite .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+.codehilite .sx { color: #008000 } /* Literal.String.Other */
+.codehilite .sr { color: #A45A77 } /* Literal.String.Regex */
+.codehilite .s1 { color: #BA2121 } /* Literal.String.Single */
+.codehilite .ss { color: #19177C } /* Literal.String.Symbol */
+.codehilite .bp { color: #008000 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #00F } /* Name.Function.Magic */
+.codehilite .vc { color: #19177C } /* Name.Variable.Class */
+.codehilite .vg { color: #19177C } /* Name.Variable.Global */
+.codehilite .vi { color: #19177C } /* Name.Variable.Instance */
+.codehilite .vm { color: #19177C } /* Name.Variable.Magic */
+.codehilite .il { color: #666 } /* Literal.Number.Integer.Long */
+  @media (prefers-color-scheme: dark) { pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.codehilite .hll { background-color: #49483e }
+.codehilite { background: #272822; color: #F8F8F2 }
+.codehilite .c { color: #959077 } /* Comment */
+.codehilite .err { color: #ED007E; background-color: #1E0010 } /* Error */
+.codehilite .esc { color: #F8F8F2 } /* Escape */
+.codehilite .g { color: #F8F8F2 } /* Generic */
+.codehilite .k { color: #66D9EF } /* Keyword */
+.codehilite .l { color: #AE81FF } /* Literal */
+.codehilite .n { color: #F8F8F2 } /* Name */
+.codehilite .o { color: #FF4689 } /* Operator */
+.codehilite .x { color: #F8F8F2 } /* Other */
+.codehilite .p { color: #F8F8F2 } /* Punctuation */
+.codehilite .ch { color: #959077 } /* Comment.Hashbang */
+.codehilite .cm { color: #959077 } /* Comment.Multiline */
+.codehilite .cp { color: #959077 } /* Comment.Preproc */
+.codehilite .cpf { color: #959077 } /* Comment.PreprocFile */
+.codehilite .c1 { color: #959077 } /* Comment.Single */
+.codehilite .cs { color: #959077 } /* Comment.Special */
+.codehilite .gd { color: #FF4689 } /* Generic.Deleted */
+.codehilite .ge { color: #F8F8F2; font-style: italic } /* Generic.Emph */
+.codehilite .ges { color: #F8F8F2; font-weight: bold; font-style: italic } /* Generic.EmphStrong */
+.codehilite .gr { color: #F8F8F2 } /* Generic.Error */
+.codehilite .gh { color: #F8F8F2 } /* Generic.Heading */
+.codehilite .gi { color: #A6E22E } /* Generic.Inserted */
+.codehilite .go { color: #66D9EF } /* Generic.Output */
+.codehilite .gp { color: #FF4689; font-weight: bold } /* Generic.Prompt */
+.codehilite .gs { color: #F8F8F2; font-weight: bold } /* Generic.Strong */
+.codehilite .gu { color: #959077 } /* Generic.Subheading */
+.codehilite .gt { color: #F8F8F2 } /* Generic.Traceback */
+.codehilite .kc { color: #66D9EF } /* Keyword.Constant */
+.codehilite .kd { color: #66D9EF } /* Keyword.Declaration */
+.codehilite .kn { color: #FF4689 } /* Keyword.Namespace */
+.codehilite .kp { color: #66D9EF } /* Keyword.Pseudo */
+.codehilite .kr { color: #66D9EF } /* Keyword.Reserved */
+.codehilite .kt { color: #66D9EF } /* Keyword.Type */
+.codehilite .ld { color: #E6DB74 } /* Literal.Date */
+.codehilite .m { color: #AE81FF } /* Literal.Number */
+.codehilite .s { color: #E6DB74 } /* Literal.String */
+.codehilite .na { color: #A6E22E } /* Name.Attribute */
+.codehilite .nb { color: #F8F8F2 } /* Name.Builtin */
+.codehilite .nc { color: #A6E22E } /* Name.Class */
+.codehilite .no { color: #66D9EF } /* Name.Constant */
+.codehilite .nd { color: #A6E22E } /* Name.Decorator */
+.codehilite .ni { color: #F8F8F2 } /* Name.Entity */
+.codehilite .ne { color: #A6E22E } /* Name.Exception */
+.codehilite .nf { color: #A6E22E } /* Name.Function */
+.codehilite .nl { color: #F8F8F2 } /* Name.Label */
+.codehilite .nn { color: #F8F8F2 } /* Name.Namespace */
+.codehilite .nx { color: #A6E22E } /* Name.Other */
+.codehilite .py { color: #F8F8F2 } /* Name.Property */
+.codehilite .nt { color: #FF4689 } /* Name.Tag */
+.codehilite .nv { color: #F8F8F2 } /* Name.Variable */
+.codehilite .ow { color: #FF4689 } /* Operator.Word */
+.codehilite .pm { color: #F8F8F2 } /* Punctuation.Marker */
+.codehilite .w { color: #F8F8F2 } /* Text.Whitespace */
+.codehilite .mb { color: #AE81FF } /* Literal.Number.Bin */
+.codehilite .mf { color: #AE81FF } /* Literal.Number.Float */
+.codehilite .mh { color: #AE81FF } /* Literal.Number.Hex */
+.codehilite .mi { color: #AE81FF } /* Literal.Number.Integer */
+.codehilite .mo { color: #AE81FF } /* Literal.Number.Oct */
+.codehilite .sa { color: #E6DB74 } /* Literal.String.Affix */
+.codehilite .sb { color: #E6DB74 } /* Literal.String.Backtick */
+.codehilite .sc { color: #E6DB74 } /* Literal.String.Char */
+.codehilite .dl { color: #E6DB74 } /* Literal.String.Delimiter */
+.codehilite .sd { color: #E6DB74 } /* Literal.String.Doc */
+.codehilite .s2 { color: #E6DB74 } /* Literal.String.Double */
+.codehilite .se { color: #AE81FF } /* Literal.String.Escape */
+.codehilite .sh { color: #E6DB74 } /* Literal.String.Heredoc */
+.codehilite .si { color: #E6DB74 } /* Literal.String.Interpol */
+.codehilite .sx { color: #E6DB74 } /* Literal.String.Other */
+.codehilite .sr { color: #E6DB74 } /* Literal.String.Regex */
+.codehilite .s1 { color: #E6DB74 } /* Literal.String.Single */
+.codehilite .ss { color: #E6DB74 } /* Literal.String.Symbol */
+.codehilite .bp { color: #F8F8F2 } /* Name.Builtin.Pseudo */
+.codehilite .fm { color: #A6E22E } /* Name.Function.Magic */
+.codehilite .vc { color: #F8F8F2 } /* Name.Variable.Class */
+.codehilite .vg { color: #F8F8F2 } /* Name.Variable.Global */
+.codehilite .vi { color: #F8F8F2 } /* Name.Variable.Instance */
+.codehilite .vm { color: #F8F8F2 } /* Name.Variable.Magic */
+.codehilite .il { color: #AE81FF } /* Literal.Number.Integer.Long */ }
+  .codehilite { border: 1px solid var(--line); border-radius: 10px;
+    overflow-x: auto; margin: 0 0 8px; }
+  .codehilite pre { margin: 0; padding: 12px 16px;
+    font: 13px/1.55 ui-monospace, "SF Mono", Menlo, monospace; }
+  .codehilite code { background: transparent; padding: 0; } /* Inline-code-Stil neutralisieren */
+  /* Farb-Labels: verbinden Code-Abschnitte mit den Diagramm-Blöcken */
+  .codeblock-label { display: inline-block; font-size: 12.5px; font-weight: 600;
+    padding: 3px 12px; margin: 16px 0 0; border-radius: 8px 8px 0 0;
+    background: color-mix(in oklab, var(--ink) 6%, transparent);
+    color: var(--ink-2); border-left: 4px solid var(--ink-3); }
+  .codeblock-label + .codehilite { border-top-left-radius: 0; }
+  .codeblock-label[data-tone="blau"] { border-left-color: #2a78d6; }
+  .codeblock-label[data-tone="rot"] { border-left-color: #d03b3b; }
+  .codeblock-label[data-tone="gelb"] { border-left-color: #fab219; }
+  .codeblock-label[data-tone="gruen"] { border-left-color: #0ca30c; }
+  .codeblock-label[data-tone="blau"] + .codehilite { border-left: 4px solid #2a78d6; }
+  .codeblock-label[data-tone="rot"] + .codehilite { border-left: 4px solid #d03b3b; }
+  .codeblock-label[data-tone="gelb"] + .codehilite { border-left: 4px solid #fab219; }
+  .codeblock-label[data-tone="gruen"] + .codehilite { border-left: 4px solid #0ca30c; }
+  /* Zweispaltige Code-Ansicht: Code links, Erklärnotizen rechts daneben.
+     Bricht aus der Textspalte aus (breiter als main), damit der Code Platz hat. */
+  .code-row { display: grid; grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 0 20px; align-items: start; margin: 16px 0 8px;
+    width: min(1220px, calc(100vw - 48px));
+    position: relative; left: 50%; transform: translateX(-50%); }
+  .code-row .codeblock-label { margin-top: 0; }
+  .code-notes { font-size: 13.5px; color: var(--ink-2); line-height: 1.55;
+    padding: 30px 0 0 14px; border-left: 1px solid var(--line); }
+  .code-notes ul { margin: 0; padding-left: 16px; }
+  .code-notes li { margin: 0 0 9px; }
+  .code-notes code { font-size: .85em; }
+  @media (max-width: 1000px) {
+    .code-row { grid-template-columns: 1fr; width: auto; left: 0; transform: none; }
+    .code-notes { padding: 6px 0 0; border-left: 0; }
+  }
+  details { background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 16px; margin: 10px 0; }
+  details summary { cursor: pointer; font-weight: 550; }
+  details[open] summary { margin-bottom: 6px; color: var(--accent); }
+  blockquote { border-left: 3px solid var(--accent); margin: 1em 0;
+    padding: 2px 0 2px 14px; color: var(--ink-2); }
+  li { margin: .25em 0; }
+  @media print {
+    body { background: #fff; color: #000; font-size: 12px; }
+    .topnav { display: none; }
+    .code-row { width: auto; left: 0; transform: none; }
+    details { break-inside: avoid; } details:not([open]) summary ~ * { display: block; }
+    pre.mermaid { break-inside: avoid; border: 1px solid #ccc; }
+    h2 { break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+<nav class="topnav"><div class="inner"><span class="brand">Invoice-to-Approval · Lernseiten</span><a href="poc-walkthrough.html">POC-Walkthrough</a><a href="skript-atlas.html">Skript-Atlas</a><span class="sep" aria-hidden="true">·</span><a href="atlas-parsers.html">parsers.py</a><a href="atlas-validation.html">validation.py</a><a href="atlas-routing.html" class="active">routing.py</a><a href="atlas-run.html">run.py</a><a href="atlas-belegflut.html">belegflut.py</a><a href="atlas-e2e-smoke.html">e2e_smoke.py</a></div></nav>
+<main>
+<h1>routing.py — das risikogestaffelte Routing (Schicht 3 der Pipeline)</h1>
+<p><strong>Zweck in einem Satz:</strong> Entscheidet für jede validierte Rechnung, ob sie ohne
+Menschen gebucht werden darf (AUTO_POST), geprüft werden muss (REVIEW) oder
+abgewiesen wird (REJECT) — und vergibt dazu eine Risikopunktzahl (0–100), die
+später in der DMN-Tabelle (Decision Model and Notation: ausführbare
+Entscheidungstabelle) die Freigabestufe steuert.</p>
+<p><strong>Einordnung in die Kette:</strong> Läuft als dritte Schicht nach dem Parsen
+(<code>parsers.py</code>) und der Validierung (<code>validation.py</code>). Sein Ergebnis
+(<code>RoutingDecision</code>) landet in <code>results.json</code> — genau dem Format, das Flowable
+(POC 03) und das Cockpit (POC 06) konsumieren.</p>
+<h2>Eingaben</h2>
+<table>
+<thead>
+<tr>
+<th>Eingabe</th>
+<th>Woher</th>
+<th>Was drinsteckt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Invoice</code>-Objekt</td>
+<td><code>parsers.py</code></td>
+<td>die geparste Rechnung: Beträge, Lieferant (Name, USt-ID, IBAN), Bestellreferenz, Extraktions-Confidence (Vertrauenswert 0–1 der Felderkennung)</td>
+</tr>
+<tr>
+<td><code>findings</code>-Liste</td>
+<td><code>validation.py</code></td>
+<td>Prüfbefunde V01–V08, je mit Schweregrad error/warning</td>
+</tr>
+<tr>
+<td><code>vendors.json</code></td>
+<td>Stammdaten-Ordner</td>
+<td>bekannte Lieferanten: USt-ID → Name + hinterlegte IBAN</td>
+</tr>
+<tr>
+<td><code>purchase_orders.json</code></td>
+<td>Stammdaten-Ordner</td>
+<td>Bestellungen: Nummer → Lieferant, Netto-Bestellwert, Wareneingang ja/nein</td>
+</tr>
+</tbody>
+</table>
+<h2>Ablauf</h2>
+<p>Der Router prüft acht Regelblöcke <strong>in fester Reihenfolge</strong>. Jeder Treffer
+erzeugt einen Grund (Klartext) und Risikopunkte. Entscheidend:</p>
+<blockquote>
+<p><strong>Die Route hängt an den Gründen, nicht an den Punkten.</strong> Ein einziger Grund
+erzwingt REVIEW; die Punkte sagen nur, <em>wie kritisch</em> — und steuern später
+die Eskalation (ab 50 → Teamleitung).</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+    A["route(inv, findings)"] --> B{"1 · Dublette?<br/>(Lieferant + Rechnungsnr.<br/>schon im seen-Register)"}
+    B -->|ja| REJ["REJECT · Risk 100<br/>sofort raus, keine weiteren Prüfungen"]
+    B -->|nein| C["2 · Validierungsfehler?<br/>je Fehlerliste: +40"]
+    C --> D["3 · Stammdaten-Abgleich<br/>Lieferant unbekannt: +30<br/>IBAN weicht ab: +50 (Betrugsverdacht)"]
+    D --> E["4 · Währung ≠ EUR: +20"]
+    E --> F["5 · Brutto > 10.000 €: +20"]
+    F --> G["6 · keine IBAN im Beleg: +10"]
+    G --> H["7 · Confidence < 0,9: +25"]
+    H --> I["8 · Bestellbezug (3-Way-Match)<br/>fehlt: +15 · unbekannt: +30<br/>fremder Lieferant: +40<br/>über Bestellwert+2 %: +30<br/>Wareneingang fehlt: +25"]
+    I --> J["Warnungen: je +5<br/>(nur Punkte, KEIN Grund!)"]
+    J --> K{"Gibt es Gründe?"}
+    K -->|ja| REV["REVIEW<br/>+ Risk-Score (max. 100)"]
+    K -->|nein| AUTO["AUTO_POST<br/>'Alle Prüfungen bestanden'"]
+    classDef setup stroke:#2a78d6,stroke-width:2.5px
+    classDef abbruch stroke:#d03b3b,stroke-width:2.5px
+    classDef punkte stroke:#fab219,stroke-width:2.5px
+    classDef entscheid stroke:#0ca30c,stroke-width:2.5px
+    class A setup
+    class B,REJ abbruch
+    class C,D,E,F,G,H,I,J punkte
+    class K,REV,AUTO entscheid
+</pre>
+<p>Die Randfarben der Blöcke tauchen unten im Code wieder auf:
+<strong>Blau</strong> = Aufbau/Einstieg · <strong>Rot</strong> = Abbruchregel (Dublette) ·
+<strong>Gelb</strong> = Punkteregeln 2–8 · <strong>Grün</strong> = Routenentscheid.</p>
+<h2>Variablen und Rahmenkriterien</h2>
+<table>
+<thead>
+<tr>
+<th>Konstante</th>
+<th>Wert</th>
+<th>Warum so</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AUTO_POST_LIMIT</code></td>
+<td>10.000 €</td>
+<td>Dunkelbuchungsgrenze: darüber immer menschliche Freigabe. Steht aktuell doppelt (hier UND in der DMN) — bekannte Schwäche; geplanter Ausbau: Schwelle nur noch in der DMN als Single Source of Truth</td>
+</tr>
+<tr>
+<td><code>MIN_CONFIDENCE</code></td>
+<td>0,9</td>
+<td>Felderkennungen unter 90 % Vertrauen (Text-Heuristik 0,6 / LLM 0,85) dürfen nie dunkelbuchen</td>
+</tr>
+<tr>
+<td><code>PO_TOLERANZ</code></td>
+<td>0,02 (2 %)</td>
+<td>Rechnung darf den Bestellwert um max. 2 % übersteigen (Rundungen, Frachtkosten) — mehr ist Klärfall</td>
+</tr>
+<tr>
+<td><code>self.seen</code></td>
+<td>Set im Arbeitsspeicher</td>
+<td>Dubletten-Register über (USt-ID, Rechnungsnummer). In-memory = pro Lauf; produktiv: Idempotenz-Schlüssel in einer Datenbank (geplanter Ausbau)</td>
+</tr>
+<tr>
+<td>Risk-Deckel</td>
+<td><code>min(risk, 100)</code></td>
+<td>Punktzahl ist auf 100 gedeckelt, damit die Skala interpretierbar bleibt</td>
+</tr>
+</tbody>
+</table>
+<h2>Prüfungen und Fehlerpfade</h2>
+<ul>
+<li><strong>Reihenfolge ist Semantik:</strong> Die Dubletten-Regel steht zuerst und bricht
+  sofort ab (<code>return</code>) — eine Dublette bekommt keine weiteren Punkte und
+  keine weiteren Gründe. Alle anderen Regeln akkumulieren.</li>
+<li><strong>Fehlende <code>purchase_orders.json</code>:</strong> wird abgefangen (<code>if po_path.exists()</code>),
+  der Router läuft dann ohne Bestelldaten — jeder Beleg mit Bestellreferenz
+  bekäme "Bestellung unbekannt" (+30).</li>
+<li><strong>Bekannte Lücke (Befund T1):</strong> Nur-Warnung-Belege erzeugen Punkte, aber
+  keinen Grund → sie werden dunkelgebucht. Für V07-Warnung ("älter als 1
+  Jahr") fängt das keine andere Regel ab. offene Design-Entscheidung.</li>
+</ul>
+<h2>Ausgaben</h2>
+<p>Ein <code>RoutingDecision</code>-Objekt (Pydantic-Modell) je Beleg: Rechnungsnummer,
+Quelldatei, Brutto, Währung, <code>route</code>, <code>risk_score</code>, <code>reasons</code> (Klartext-Liste —
+der Audit-Trail), <code>findings</code> (durchgereichte Validierungsbefunde). Gesammelt
+als <code>output/results.json</code>.</p>
+<h2>Der vollständige Code — geführt</h2>
+<p>Das ist die komplette <code>routing.py</code> (131 Zeilen), in Lese-Abschnitte zerlegt.
+Die Farbmarkierung links entspricht den Diagramm-Blöcken oben; nichts ist
+ausgelassen — untereinander gelesen ergeben die Abschnitte exakt die Datei.
+Rechts neben jedem Abschnitt erklärt eine Notiz-Spalte die einzelnen Passagen
+(bei schmalem Fenster rutscht sie unter den Code).</p>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Aufbau · Docstring, Importe, die drei Rahmenkriterien (Z. 1–17)</div>
+<div class="codehilite"><pre><span></span><code><span class="sd">&quot;&quot;&quot;Risk-tiered Routing — Schicht 3 der Pipeline.</span>
+
+<span class="sd">Umsetzung des Musters &quot;risk-tiered autonomy&quot; aus der Research-Note:</span>
+<span class="sd">Dunkelbuchung (AUTO_POST) nur, wenn ALLE Bedingungen erfüllt sind —</span>
+<span class="sd">jede Auffälligkeit eskaliert in die Review-Queue, Dubletten werden abgewiesen.</span>
+<span class="sd">Die Regeln sind bewusst deterministisch und erklärbar (Audit-Trail!).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">decimal</span><span class="w"> </span><span class="kn">import</span> <span class="n">Decimal</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Finding</span><span class="p">,</span> <span class="n">Invoice</span><span class="p">,</span> <span class="n">Route</span><span class="p">,</span> <span class="n">RoutingDecision</span><span class="p">,</span> <span class="n">Severity</span>
+
+<span class="n">AUTO_POST_LIMIT</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;10000&quot;</span><span class="p">)</span>   <span class="c1"># Brutto-Schwelle für Dunkelbuchung</span>
+<span class="n">MIN_CONFIDENCE</span> <span class="o">=</span> <span class="mf">0.9</span>                 <span class="c1"># darunter immer Review</span>
+<span class="n">PO_TOLERANZ</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="s2">&quot;0.02&quot;</span><span class="p">)</span>        <span class="c1"># Rechnung darf Bestellwert um max. 2 % übersteigen</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Docstring (Z. 1–7):</strong> erklärt das <em>Warum</em> (risk-tiered autonomy), nicht nur das Was — die Datei trägt ihre Architektur-Begründung selbst.</li>
+<li><strong><code>Decimal</code> statt <code>float</code>:</strong> Geldbeträge nie als Gleitkommazahl — <code>0.1 + 0.2</code> ergibt dort <code>0.30000000000000004</code>. <code>Decimal</code> rechnet exakt.</li>
+<li><strong><code>from .models import …</code>:</strong> relativer Import (führender Punkt) aus dem eigenen Paket <code>pipeline</code>.</li>
+<li><strong>Konstanten GROSS auf Modulebene:</strong> die drei Stellschrauben des Skripts an einem Ort, statt als "magische Zahlen" im Code verstreut.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="blau">Aufbau · Konstruktor: Stammdaten laden, Dubletten-Register anlegen (Z. 20–27)</div>
+<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Router</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">masterdata_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vendors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">masterdata_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span>
+        <span class="n">po_path</span> <span class="o">=</span> <span class="n">masterdata_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;purchase_orders.json&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">purchase_orders</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">po_path</span><span class="o">.</span><span class="n">read_text</span><span class="p">())</span> <span class="k">if</span> <span class="n">po_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="k">else</span> <span class="p">{}</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seen</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>   <span class="c1"># (vat_id|name, invoice_number)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>__init__</code> läuft einmal</strong> beim Erzeugen des Routers und lädt beide Stammdaten-Dateien als Dictionary (Schlüssel-Wert-Tabelle im Speicher).</li>
+<li><strong><code>… if po_path.exists() else {}</code>:</strong> bedingter Ausdruck — fehlt die Bestelldatei, stürzt nichts ab, es gibt einfach eine leere Tabelle.</li>
+<li><strong><code>self.seen</code> ist ein Set</strong> (Menge ohne Duplikate, Nachschlagen in konstanter Zeit). Es lebt nur im Objekt: das In-Memory-Dubletten-Register aus der Variablen-Tabelle oben.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="rot">Block 1 · Dublette → sofort REJECT mit Risk 100, Abbruch (Z. 29–44)</div>
+<div class="codehilite"><pre><span></span><code>    <span class="k">def</span><span class="w"> </span><span class="nf">route</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inv</span><span class="p">:</span> <span class="n">Invoice</span><span class="p">,</span> <span class="n">findings</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Finding</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">RoutingDecision</span><span class="p">:</span>
+        <span class="n">reasons</span><span class="p">,</span> <span class="n">risk</span> <span class="o">=</span> <span class="p">[],</span> <span class="mi">0</span>
+        <span class="n">errors</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">findings</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">severity</span> <span class="o">==</span> <span class="n">Severity</span><span class="o">.</span><span class="n">ERROR</span><span class="p">]</span>
+        <span class="n">warnings</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">findings</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">severity</span> <span class="o">==</span> <span class="n">Severity</span><span class="o">.</span><span class="n">WARNING</span><span class="p">]</span>
+
+        <span class="c1"># 1. Dublette -&gt; REJECT (härteste Regel zuerst)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">vat_id</span> <span class="ow">or</span> <span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">inv</span><span class="o">.</span><span class="n">invoice_number</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">seen</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">RoutingDecision</span><span class="p">(</span>
+                <span class="n">invoice_number</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">invoice_number</span><span class="p">,</span> <span class="n">source_file</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">source_file</span><span class="p">,</span>
+                <span class="n">total_gross</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">total_gross</span><span class="p">,</span> <span class="n">currency</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">currency</span><span class="p">,</span>
+                <span class="n">route</span><span class="o">=</span><span class="n">Route</span><span class="o">.</span><span class="n">REJECT</span><span class="p">,</span> <span class="n">risk_score</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                <span class="n">reasons</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;Dublette: Rechnung </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">invoice_number</span><span class="si">}</span><span class="s2"> von &quot;</span>
+                         <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> bereits verarbeitet&quot;</span><span class="p">],</span>
+                <span class="n">findings</span><span class="o">=</span><span class="n">findings</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Signatur mit Typ-Hinweisen:</strong> nimmt <code>Invoice</code> + Findings-Liste, verspricht eine <code>RoutingDecision</code> — die Verträge zwischen den Schichten.</li>
+<li><strong><code>reasons, risk = [], 0</code>:</strong> Mehrfachzuweisung — zwei Variablen in einer Zeile initialisiert.</li>
+<li><strong>Die zwei List Comprehensions</strong> filtern die Findings nach Schweregrad in <code>errors</code> und <code>warnings</code>.</li>
+<li><strong><code>vat_id or …name</code>:</strong> <code>or</code>-Fallback — fehlt die USt-ID (<code>None</code>), dient der Name als Dubletten-Schlüssel.</li>
+<li><strong>Early Return:</strong> die Dublette verlässt die Funktion sofort — deshalb sammelt sie keine weiteren Punkte/Gründe.</li>
+<li><strong><code>seen.add(key)</code> steht NACH der Prüfung:</strong> das Original registriert sich, erst die Kopie scheitert.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Block 2 · Validierungsfehler: +40 (Z. 46–49)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="c1"># 2. Validierungsfehler -&gt; Review</span>
+        <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">40</span>
+            <span class="n">reasons</span> <span class="o">+=</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;Validierungsfehler </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">code</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">message</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">errors</span><span class="p">]</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>if errors:</code></strong> — eine leere Liste zählt in Python als "falsch"; das ist die idiomatische Existenzprüfung.</li>
+<li><strong><code>reasons += […]</code></strong> hängt <em>mehrere</em> Gründe auf einmal an (einen je Validierungsfehler) — die +40 Punkte gibt es aber nur einmal pro Beleg, egal wie viele Fehler.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Block 3 · Stammdaten-Abgleich: unbekannt +30, IBAN-Abweichung +50 (Z. 51–60)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="c1"># 3. Stammdaten-Abgleich</span>
+        <span class="n">vendor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vendors</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">vat_id</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">vendor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">30</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Neuer Lieferant &#39;</span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; — &quot;</span>
+                           <span class="s2">&quot;Stammdatenprüfung erforderlich&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">iban</span> <span class="ow">and</span> <span class="n">vendor</span><span class="p">[</span><span class="s2">&quot;iban&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">iban</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">50</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bankverbindung weicht von Stammdaten ab &quot;</span>
+                           <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">vendor</span><span class="p">[</span><span class="s1">&#39;iban&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">iban</span><span class="si">}</span><span class="s2">) — Fraud-Check!&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>.get(…, "")</code></strong> statt <code>[…]</code>: fehlender Schlüssel liefert <code>None</code> statt Absturz.</li>
+<li><strong><code>elif</code> heißt: die Prüfungen schließen sich aus.</strong> Feinheit mit Folgen: Ein <em>unbekannter</em> Lieferant bekommt nie den IBAN-Vergleich — es gibt ja keine hinterlegte IBAN. Deshalb sind "neu" (+30) und "IBAN weicht ab" (+50) nie gleichzeitig möglich.</li>
+<li><strong>+50 ist der höchste Einzelaufschlag:</strong> der IBAN-Wechsel ist das klassische Zahlungsumleitungs-Betrugsmuster (Szenario s3).</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Block 4 · Fremdwährung: +20 (Z. 62–67)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="c1"># 4. Währung: alle Schwellwerte sind in EUR definiert</span>
+        <span class="k">if</span> <span class="n">inv</span><span class="o">.</span><span class="n">currency</span> <span class="o">!=</span> <span class="s2">&quot;EUR&quot;</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">20</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fremdwährung </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">currency</span><span class="si">}</span><span class="s2"> — Schwellwert- und &quot;</span>
+                           <span class="s2">&quot;Stammdatenprüfung nur für EUR definiert, &quot;</span>
+                           <span class="s2">&quot;manuelle Prüfung erforderlich&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li>Alle Schwellwerte des Skripts sind <strong>in EUR definiert</strong> — bei Fremdwährung wären Vergleiche wie "über 10.000?" bedeutungslos. Deshalb pauschal in die manuelle Prüfung statt falscher Präzision.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Block 5 · Betragsschwelle: +20 (Z. 69–74)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="c1"># 5. Betragsschwelle</span>
+        <span class="k">if</span> <span class="n">inv</span><span class="o">.</span><span class="n">total_gross</span> <span class="o">&gt;</span> <span class="n">AUTO_POST_LIMIT</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">20</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Brutto </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">total_gross</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">currency</span><span class="si">}</span><span class="s2"> über &quot;</span>
+                           <span class="sa">f</span><span class="s2">&quot;Dunkelbuchungsgrenze </span><span class="si">{</span><span class="n">AUTO_POST_LIMIT</span><span class="si">}</span><span class="s2"> EUR — &quot;</span>
+                           <span class="s2">&quot;Freigabe erforderlich&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li>Decimal-Vergleich gegen die Konstante <code>AUTO_POST_LIMIT</code>.</li>
+<li>Der Grund-Text nennt <strong>Betrag UND Grenze</strong> — wer später den Audit-Trail liest, braucht den Code nicht, um die Entscheidung nachzuvollziehen.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Block 6 · Zahlweg: keine IBAN +10 (Z. 76–80)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="c1"># 6. Zahlweg: ohne IBAN keine Dunkelbuchung</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">iban</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">10</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Keine IBAN im Beleg — Zahlweg ungeklärt, &quot;</span>
+                           <span class="s2">&quot;keine Dunkelbuchung möglich&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>not inv.seller.iban</code></strong> fängt beides: <code>None</code> (Feld fehlt) und <code>""</code> (leerer String).</li>
+<li>Ohne Kontonummer gibt es keinen Zahlweg — da hilft auch der sauberste Beleg nichts.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Block 7 · Extraktions-Confidence unter 0,9: +25 (Z. 82–87)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="c1"># 7. Extraktions-Confidence (Fallback-Pfad)</span>
+        <span class="k">if</span> <span class="n">inv</span><span class="o">.</span><span class="n">extraction_confidence</span> <span class="o">&lt;</span> <span class="n">MIN_CONFIDENCE</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">25</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Extraktions-Confidence </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">extraction_confidence</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> &quot;</span>
+                           <span class="sa">f</span><span class="s2">&quot;unter Schwellwert </span><span class="si">{</span><span class="n">MIN_CONFIDENCE</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> — &quot;</span>
+                           <span class="s2">&quot;manuelle Prüfung der extrahierten Felder&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong><code>:.0%</code></strong> im f-String formatiert <code>0.6</code> als <code>60%</code> — Formatierung gehört in die Ausgabe, nicht in die Daten.</li>
+<li>Die Confidence entsteht beim Parsen: 1,0 = strukturierte E-Rechnung, 0,6 = Text-Heuristik, 0,85 = LLM-Extraktion. Nur der Fallback-Pfad landet je unter dem Gate.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gelb">Block 8 · Bestellbezug / 3-Way-Match: +15 bis +40 je Befund (Z. 89–118)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="c1"># 8. Bestellbezug: 2-/3-Way-Match gegen Bestellung und Wareneingang.</span>
+        <span class="c1">#    Ohne erfolgreichen Match keine Dunkelbuchung — die Rechnung mag in</span>
+        <span class="c1">#    sich stimmen, aber nur der Abgleich gegen die externe Referenz</span>
+        <span class="c1">#    beweist, dass bestellt und geliefert wurde.</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">inv</span><span class="o">.</span><span class="n">purchase_order_ref</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">15</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Kein Bestellbezug — Dunkelbuchung nur mit &quot;</span>
+                           <span class="s2">&quot;erfolgreichem 3-Way-Match möglich&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">po</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">purchase_orders</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">inv</span><span class="o">.</span><span class="n">purchase_order_ref</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">po</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">risk</span> <span class="o">+=</span> <span class="mi">30</span>
+                <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bestellung </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">purchase_order_ref</span><span class="si">}</span><span class="s2"> unbekannt &quot;</span>
+                               <span class="s2">&quot;— Bestellbezug klären&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">po</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;vendor_vat_id&quot;</span><span class="p">)</span> <span class="ow">and</span> \
+                        <span class="n">po</span><span class="p">[</span><span class="s2">&quot;vendor_vat_id&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="p">(</span><span class="n">inv</span><span class="o">.</span><span class="n">seller</span><span class="o">.</span><span class="n">vat_id</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span><span class="p">):</span>
+                    <span class="n">risk</span> <span class="o">+=</span> <span class="mi">40</span>
+                    <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Bestellung </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">purchase_order_ref</span><span class="si">}</span><span class="s2"> gehört &quot;</span>
+                                   <span class="s2">&quot;zu einem anderen Lieferanten — prüfen&quot;</span><span class="p">)</span>
+                <span class="n">limit</span> <span class="o">=</span> <span class="n">Decimal</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">po</span><span class="p">[</span><span class="s2">&quot;net_amount&quot;</span><span class="p">]))</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">PO_TOLERANZ</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">inv</span><span class="o">.</span><span class="n">total_net</span> <span class="o">&gt;</span> <span class="n">limit</span><span class="p">:</span>
+                    <span class="n">risk</span> <span class="o">+=</span> <span class="mi">30</span>
+                    <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Netto </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">total_net</span><span class="si">}</span><span class="s2"> über Bestellwert &quot;</span>
+                                   <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">po</span><span class="p">[</span><span class="s1">&#39;net_amount&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2"> zzgl. </span><span class="si">{</span><span class="n">PO_TOLERANZ</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> &quot;</span>
+                                   <span class="s2">&quot;Toleranz — Preis-/Mengenabweichung klären&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">po</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;goods_received&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+                    <span class="n">risk</span> <span class="o">+=</span> <span class="mi">25</span>
+                    <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Wareneingang zu </span><span class="si">{</span><span class="n">inv</span><span class="o">.</span><span class="n">purchase_order_ref</span><span class="si">}</span><span class="s2"> &quot;</span>
+                                   <span class="s2">&quot;fehlt — 3-Way-Match unvollständig&quot;</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Drei Stufen verschachtelt:</strong> keine Referenz → Referenz unbekannt → bekannte Bestellung mit drei Detailprüfungen (Lieferant, Betrag, Wareneingang).</li>
+<li><strong><code>Decimal(str(po["net_amount"]))</code>:</strong> der Betrag steht im JSON als String — direkte Konvertierung, nie den Umweg über <code>float</code>.</li>
+<li><strong><code>* (1 + PO_TOLERANZ)</code>:</strong> die 2-%-Toleranz als Multiplikator (600 → Grenze 612).</li>
+<li><strong><code>po.get("goods_received", False)</code>:</strong> fehlt das Feld, gilt der Wareneingang als NICHT gebucht — der vorsichtige Default. Genau das prüft eine der Belegflut-Abnahme-Fragen.</li>
+</ul>
+</aside>
+</div>
+<div class="code-row">
+<div class="code-col">
+<div class="codeblock-label" data-tone="gruen">Routenentscheid · Warnungen +5, dann: Gründe? REVIEW, sonst AUTO_POST (Z. 120–130)</div>
+<div class="codehilite"><pre><span></span><code>        <span class="k">if</span> <span class="n">warnings</span><span class="p">:</span>
+            <span class="n">risk</span> <span class="o">+=</span> <span class="mi">5</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">warnings</span><span class="p">)</span>
+
+        <span class="n">route</span> <span class="o">=</span> <span class="n">Route</span><span class="o">.</span><span class="n">REVIEW</span> <span class="k">if</span> <span class="n">reasons</span> <span class="k">else</span> <span class="n">Route</span><span class="o">.</span><span class="n">AUTO_POST</span>
+        <span class="k">if</span> <span class="n">route</span> <span class="o">==</span> <span class="n">Route</span><span class="o">.</span><span class="n">AUTO_POST</span><span class="p">:</span>
+            <span class="n">reasons</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Alle Prüfungen bestanden — Dunkelbuchung&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">RoutingDecision</span><span class="p">(</span>
+            <span class="n">invoice_number</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">invoice_number</span><span class="p">,</span> <span class="n">source_file</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">source_file</span><span class="p">,</span>
+            <span class="n">total_gross</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">total_gross</span><span class="p">,</span> <span class="n">currency</span><span class="o">=</span><span class="n">inv</span><span class="o">.</span><span class="n">currency</span><span class="p">,</span>
+            <span class="n">route</span><span class="o">=</span><span class="n">route</span><span class="p">,</span> <span class="n">risk_score</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span><span class="n">risk</span><span class="p">,</span> <span class="mi">100</span><span class="p">),</span>
+            <span class="n">reasons</span><span class="o">=</span><span class="n">reasons</span><span class="p">,</span> <span class="n">findings</span><span class="o">=</span><span class="n">findings</span><span class="p">)</span>
+</code></pre></div>
+
+</div>
+<aside class="code-notes">
+<ul>
+<li><strong>Warnungen: nur Punkte, kein Grund</strong> — genau hier entsteht Befund T1 (Nur-Warnung-Beleg wird dunkelgebucht).</li>
+<li><strong><code>Route.REVIEW if reasons else Route.AUTO_POST</code>:</strong> die gesamte Routen-Logik in einer Zeile — Gründe entscheiden, Punkte nicht.</li>
+<li><strong><code>min(risk, 100)</code>:</strong> Deckelung, damit die Skala interpretierbar bleibt.</li>
+<li>Der AUTO_POST-Fall bekommt nachträglich seinen einen "Grund" — dafür, dass das Cockpit nie eine leere Begründung zeigt.</li>
+</ul>
+</aside>
+</div>
+<p><strong>Zum Nachschlagen:</strong> Datei <code>poc/02-invoice-pipeline/pipeline/routing.py</code> ·
+zugehörige Tests: <code>tests/test_routing.py</code> (15 Tests, einer je Regel — dort
+sieht man jede Regel isoliert ausgelöst).</p>
+<h2>Selbsttest</h2>
+<details>
+<summary>1. Warum steht die Dubletten-Regel zuerst und bricht ab, statt zu akkumulieren?</summary>
+<p>Eine Dublette ist der klarste Abweisungsgrund (Doppelzahlungsschutz) — weitere
+Prüfungen würden nur Rauschen erzeugen (die Dublette hätte ja dieselben
+Befunde wie das Original). REJECT mit Risk 100 macht die Entscheidung
+eindeutig und billig: kein menschlicher Aufwand.</p>
+</details>
+<details>
+<summary>2. Ein Beleg hat Risk 45. Kann er trotzdem AUTO_POST sein? Und Risk 5?</summary>
+<p>Risk 45 → nein: Punkte entstehen nur zusammen mit Gründen (außer bei
+Warnungen), und Gründe erzwingen REVIEW. Risk 5 → ja! Das ist genau Befund
+T1: eine einzelne Warnung gibt +5 ohne Grund — der Beleg wird dunkelgebucht.</p>
+</details>
+<details>
+<summary>3. Warum brauchen die Tests für jeden Fall einen frischen Router?</summary>
+<p>Wegen <code>self.seen</code>: Das Dubletten-Register lebt im Router-Objekt. Ein
+wiederverwendeter Router würde den zweiten Testbeleg mit gleicher Nummer als
+Dublette abweisen — Tests würden sich gegenseitig beeinflussen. Deshalb baut
+die Test-Fixture pro Test einen neuen Router mit eigenen Stammdaten
+(<code>tmp_path</code>).</p>
+</details>
+</main>
+<script src="mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    securityLevel: "loose",  /* erlaubt click-Links in Diagrammen */
+    theme: matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "neutral",
+    themeVariables: { fontSize: "16px",
+      fontFamily: '-apple-system, "Segoe UI", Roboto, sans-serif' },
+    flowchart: { htmlLabels: true, curve: "basis", useMaxWidth: false }
+  });
+</script>
+</body>
+</html>

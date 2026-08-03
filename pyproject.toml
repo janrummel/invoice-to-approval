@@ -1,0 +1,18 @@
+[project]
+name = "finance-automation-lab"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2",
+  "python-stdnum",
+  "lxml",
+  "pypdf",
+  "pdfplumber",
+  "fpdf2",
+  "pytest>=8",
+  "requests",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -62,6 +62,29 @@ Im Cockpit: Posteingang mit Suche/Filter/Sortierung, Detail-Panel mit Tabs
 Jeder POC ist auch einzeln lauffähig; die READMEs in den Unterordnern erklären
 Ausführung, Design-Entscheidungen und bewusste Demo-Grenzen.
 
+## Testfundament
+
+Die Kette ist automatisiert abgesichert: **33 Tests** (`uv run pytest`) decken
+alle Validierungsregeln (V01–V08), die komplette Routing-Punktetabelle und
+Angriffs-Belege ab (XXE-Regression, kaputtes XML, nicht-positive Beträge —
+Regel V08 entstand test-getrieben). Jeder Test wurde per Mutation-Beweis
+geprüft (absichtlich rot gesehen). Dazu: End-to-End-Smoke gegen die laufende
+Engine (`uv run scripts/e2e_smoke.py`, harte Exit-Codes) und das
+Abnahme-Szenario "Belegflut" (`uv run scripts/belegflut.py`, 30 Belege gegen
+eine Soll-Verteilung). Details: [docs/test-checkliste.md](docs/test-checkliste.md).
+
+## Lern-Portal: das Repo erklärt sich selbst
+
+Unter `docs/` liegt ein verlinktes Lern-Portal (offline lesbar — HTML im
+Browser öffnen, gemeinsame Navigation über alle Seiten):
+
+- **[POC-Walkthrough](docs/poc-walkthrough.md)** — Konzepte je Baustein:
+  Diagramme, die Zahlen, bewusste Grenzen, Glossar (~90 Begriffe, alle
+  Abkürzungen erklärt)
+- **[Skript-Atlas](docs/skript-atlas.md)** — sechs Skripte auf Code-Ebene
+  geöffnet: Ablauf-Diagramm, Variablen mit Begründung, der **vollständige
+  Code mit Erklärnotizen in einer zweiten Spalte**, Selbsttest-Fragen
+
 ## Bewusste Grenzen
 
 Das ist ein Demonstrations-Stack, kein Produkt. Die wichtigsten bewussten
