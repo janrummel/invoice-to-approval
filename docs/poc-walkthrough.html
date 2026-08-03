@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>POC-Walkthrough: verstehen, durchdringen, erklären</title>
+<meta property="og:title" content="POC-Walkthrough: verstehen, durchdringen, erklären">
+<meta property="og:description" content="Invoice-to-Approval: sechs verzahnte POCs für Rechnungsautomatisierung (Process Mining, E-Rechnung, BPMN/DMN, n8n, LLM mit Human-in-the-Loop), als selbst-erklärendes Lern-Portal.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
 <style>
   :root {
     color-scheme: light dark;
@@ -266,7 +270,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 bis Freigabe") <strong>ohne Spickzettel erklären</strong> können. Pro POC (Proof of Concept:
 Machbarkeitsnachweis, ein kleines lauffähiges Beispiel): Ablauf als Diagramm,
 die Konzepte dahinter, die Zahlen, die man kennen muss, die bewussten Grenzen
-(je mit produktivem Schritt) und eine Sprechfassung. Am Ende: Zahlen-Spickzettel,
+(je mit produktivem Schritt) und eine 60-Sekunden-Erklärung (als wörtliche Sprechfassung). Am Ende: Zahlen-Spickzettel,
 Selbsttest und ein <strong>Glossar</strong>, das alle Abkürzungen und Fachbegriffe
 alphabetisch sammelt. Jeder Begriff wird zusätzlich bei der ersten Nennung kurz
 in Klammern erklärt.</p>
@@ -388,7 +392,7 @@ Preisabweichungsklärung (27 Stunden/Monat).</p>
   Durchschnitt: Summe geteilt durch Anzahl — reagiert stark auf Ausreißer). Auf
   dem <strong>Median</strong> (der mittlere Wert, wenn man alle Fälle der Größe nach sortiert
   — robust gegen Ausreißer) ist der Faktor kleiner, die Aussage bleibt. Im
-  Realeinsatz weise ich beides aus."</li>
+  Realeinsatz beides ausweisen."</li>
 <li>"Die FTE-Zahl beruht auf <strong>angenommenen</strong> Bearbeitungszeiten je Touch; real
   durch Task Mining (automatische Aufzeichnung der Bildschirmarbeit) oder
   Interviews kalibrieren."</li>
@@ -399,7 +403,7 @@ Preisabweichungsklärung (27 Stunden/Monat).</p>
   muss den eigenen Quellcode offenlegen). Für interne Analysen unkritisch, bei
   Einbettung in Produkte Lizenzprüfung; eine kommerzielle Lizenz existiert.</li>
 </ul>
-<p><strong>Sprechfassung:</strong> "Ich habe einen Purchase-to-Pay-Event-Log mit PM4Py
+<p><strong>In 60 Sekunden erklärt:</strong> "Ich habe einen Purchase-to-Pay-Event-Log mit PM4Py
 analysiert: Variantenanalyse, Engpässe, manuelle Eingriffe. Der Befund
 priorisiert die Automatisierung: Abweichungsfälle laufen doppelt so lange, rund
 0,7 Vollzeitstellen hängen in manuellen Schritten, und die zwei größten Hebel
@@ -545,7 +549,7 @@ s7 in sich konsistent, aber über Bestellwert + Toleranz → REVIEW (3-Way-Match
   als Single Source of Truth (die eine verbindliche Quelle, aus der alle anderen
   lesen).</li>
 </ul>
-<p><strong>Sprechfassung:</strong> "Drei Schichten: Einlesen für XRechnung in beiden Syntaxen
+<p><strong>In 60 Sekunden erklärt:</strong> "Drei Schichten: Einlesen für XRechnung in beiden Syntaxen
 und ZUGFeRD, dann deterministische Validierung von Summen über die
 IBAN-Prüfsumme bis zur Datums-Plausibilität, dann risikogestaffeltes Routing mit
 Dubletten-Check, Stammdaten-Abgleich inklusive IBAN-Betrugs-Check und
@@ -674,7 +678,7 @@ passende Zeile gewinnt"):</strong></p>
   ein Dokumentenmanagement- oder Archivsystem (DMS)."</p>
 </li>
 </ul>
-<p><strong>Sprechfassung:</strong> "Die Pipeline liefert Route und Risikopunktzahl, eine
+<p><strong>In 60 Sekunden erklärt:</strong> "Die Pipeline liefert Route und Risikopunktzahl, eine
 DMN-Tabelle mit der Trefferregel FIRST macht daraus die Freigabestufe:
 Ablehnung, Dunkelbuchung, Sachbearbeitung oder Teamleitung ab 50 Punkten oder
 über 10.000 Euro. Der menschliche Arbeitsschritt bekommt seine Rolle dynamisch
@@ -728,7 +732,7 @@ Version mit Langzeitpflege), inklusive Neu-Kompilieren des
 sqlite3-Datenbankmoduls (dokumentiert in run_demo.sh). Außerdem muss auf macOS
 die Groß-/Kleinschreibung des Pfads auf die echte Schreibweise gebracht werden,
 weil n8ns Dateizugriffs-Schutzvariable den Pfad buchstabengetreu vergleicht.</p>
-<p><strong>Sprechfassung:</strong> "n8n klammert die Kette: Pipeline ausführen, Ergebnis in
+<p><strong>In 60 Sekunden erklärt:</strong> "n8n klammert die Kette: Pipeline ausführen, Ergebnis in
 Einzelbelege zerlegen, je Beleg über die REST-Schnittstelle eine
 Flowable-Instanz starten. Bewusst reine Orchestrierung ohne Fachlogik. Wichtig
 im Enterprise-Kontext: die fair-code-Lizenz und Enterprise-Funktionen wie
@@ -781,7 +785,7 @@ Finance-Prozess, und wo nicht?"</p>
 <p><strong>Warum das der teuerste Hebel ist:</strong> POC 01 zeigt die Abweichungsklärung mit
 durchschnittlich 25 Minuten pro Fall als zweitgrößten manuellen Block; Demo 2
 setzt genau dort an.</p>
-<p><strong>Sprechfassung:</strong> "Zwei Demos: Erstens ersetzt Claude die Text-Heuristik für
+<p><strong>In 60 Sekunden erklärt:</strong> "Zwei Demos: Erstens ersetzt Claude die Text-Heuristik für
 Scans ohne XML, aber der Output läuft durch dieselben deterministischen Regeln
 wie jeder Beleg, und der Vertrauenswert bleibt unter der Dunkelbuchungs-Schwelle.
 Zweitens entwirft Claude aus den strukturierten Befunden die Lieferanten-Anfrage

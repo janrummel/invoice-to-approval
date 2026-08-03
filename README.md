@@ -8,6 +8,12 @@ unscharfen Ränder, und ein Live-Cockpit macht die Freigabe bedienbar.
 
 Alle Daten sind **synthetisch** (Seed 42). Kein Kundenbezug, keine Echtdaten.
 
+**Für wen:** Entwickler:innen, Architekt:innen und Fachbereichs-Menschen, die
+verstehen wollen, wie moderne Rechnungsautomatisierung (Purchase-to-Pay)
+zusammenspielt: E-Rechnung, Prozess-Engine, Entscheidungstabellen, LLM-Einsatz
+mit Kontrolle. Python-Grundkenntnisse reichen; das Lern-Portal unter `docs/`
+erklärt alle Fachbegriffe und den kompletten Code.
+
 ```
 POC 01              POC 02                 POC 03                  POC 06
 Process Mining ──▶  Invoice-Pipeline ──▶   Flowable BPMN+DMN ──▶   Freigabe-Cockpit
@@ -93,6 +99,29 @@ Vereinfachungen stehen je POC im Abschnitt "Grenzen" bzw.
 JSON-Fixtures statt ERP-Anbindung, abgeleitete statt authentifizierte Rollen im
 Cockpit, Demo-Credentials der Engine. Produktiv gehören dahin: Idempotenz-Keys
 in einer DB, OData/REST ans ERP, SSO/Rollenprüfung, Secret-Store.
+
+## FAQ
+
+**Warum synthetische Daten?** Reproduzierbar (fester Seed), keine
+Datenschutzfragen, und die Logik überträgt sich unverändert auf echte
+ERP-Extrakte.
+
+**Warum sechs POCs statt einem Tool?** Jeder Baustein beantwortet eine eigene
+Frage (Warum automatisieren? Wie sicher einlesen? Wer gibt frei?). Die Trennung
+macht Architektur-Entscheidungen sichtbar, die ein Monolith verstecken würde.
+
+**Warum darf das LLM so wenig?** These des Projekts: Das LLM extrahiert,
+formuliert und schlägt vor. Buchen, freigeben und rechnen tun deterministische
+Regeln, Prozess-Engine und Mensch, gestaffelt nach Risiko. Automatisierung im
+Finance-Umfeld ist ein Governance-Problem mit technischer Komponente.
+
+**Ist das produktionsreif?** Nein, bewusst nicht (siehe "Bewusste Grenzen").
+Es ist ein Demonstrations- und Lern-Stack mit ehrlich markierten Lücken und
+benannten produktiven Ausbauschritten.
+
+**Wie wurde das gebaut?** KI-gestützt (Claude Code): Ich habe gelesen, geprüft
+und dirigiert. Das Testfundament (33 Tests, Mutation-geprüft) ist die Antwort
+darauf, wie man KI-gebautem Code trauen kann.
 
 ## Lizenz
 

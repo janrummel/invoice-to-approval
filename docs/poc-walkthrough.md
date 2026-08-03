@@ -4,7 +4,7 @@ Zweck: Du sollst jeden Baustein der Invoice-to-Approval-Kette ("Rechnungseingang
 bis Freigabe") **ohne Spickzettel erklären** können. Pro POC (Proof of Concept:
 Machbarkeitsnachweis, ein kleines lauffähiges Beispiel): Ablauf als Diagramm,
 die Konzepte dahinter, die Zahlen, die man kennen muss, die bewussten Grenzen
-(je mit produktivem Schritt) und eine Sprechfassung. Am Ende: Zahlen-Spickzettel,
+(je mit produktivem Schritt) und eine 60-Sekunden-Erklärung (als wörtliche Sprechfassung). Am Ende: Zahlen-Spickzettel,
 Selbsttest und ein **Glossar**, das alle Abkürzungen und Fachbegriffe
 alphabetisch sammelt. Jeder Begriff wird zusätzlich bei der ersten Nennung kurz
 in Klammern erklärt.
@@ -110,7 +110,7 @@ Preisabweichungsklärung (27 Stunden/Monat).
   Durchschnitt: Summe geteilt durch Anzahl — reagiert stark auf Ausreißer). Auf
   dem **Median** (der mittlere Wert, wenn man alle Fälle der Größe nach sortiert
   — robust gegen Ausreißer) ist der Faktor kleiner, die Aussage bleibt. Im
-  Realeinsatz weise ich beides aus."
+  Realeinsatz beides ausweisen."
 - "Die FTE-Zahl beruht auf **angenommenen** Bearbeitungszeiten je Touch; real
   durch Task Mining (automatische Aufzeichnung der Bildschirmarbeit) oder
   Interviews kalibrieren."
@@ -121,7 +121,7 @@ Preisabweichungsklärung (27 Stunden/Monat).
   muss den eigenen Quellcode offenlegen). Für interne Analysen unkritisch, bei
   Einbettung in Produkte Lizenzprüfung; eine kommerzielle Lizenz existiert.
 
-**Sprechfassung:** "Ich habe einen Purchase-to-Pay-Event-Log mit PM4Py
+**In 60 Sekunden erklärt:** "Ich habe einen Purchase-to-Pay-Event-Log mit PM4Py
 analysiert: Variantenanalyse, Engpässe, manuelle Eingriffe. Der Befund
 priorisiert die Automatisierung: Abweichungsfälle laufen doppelt so lange, rund
 0,7 Vollzeitstellen hängen in manuellen Schritten, und die zwei größten Hebel
@@ -234,7 +234,7 @@ s7 in sich konsistent, aber über Bestellwert + Toleranz → REVIEW (3-Way-Match
   als Single Source of Truth (die eine verbindliche Quelle, aus der alle anderen
   lesen).
 
-**Sprechfassung:** "Drei Schichten: Einlesen für XRechnung in beiden Syntaxen
+**In 60 Sekunden erklärt:** "Drei Schichten: Einlesen für XRechnung in beiden Syntaxen
 und ZUGFeRD, dann deterministische Validierung von Summen über die
 IBAN-Prüfsumme bis zur Datums-Plausibilität, dann risikogestaffeltes Routing mit
 Dubletten-Check, Stammdaten-Abgleich inklusive IBAN-Betrugs-Check und
@@ -342,7 +342,7 @@ passende Zeile gewinnt"):**
   revisionssicheres Belegarchiv; die 10-Jahres-Ablage ist ein eigener Baustein,
   ein Dokumentenmanagement- oder Archivsystem (DMS)."
 
-**Sprechfassung:** "Die Pipeline liefert Route und Risikopunktzahl, eine
+**In 60 Sekunden erklärt:** "Die Pipeline liefert Route und Risikopunktzahl, eine
 DMN-Tabelle mit der Trefferregel FIRST macht daraus die Freigabestufe:
 Ablehnung, Dunkelbuchung, Sachbearbeitung oder Teamleitung ab 50 Punkten oder
 über 10.000 Euro. Der menschliche Arbeitsschritt bekommt seine Rolle dynamisch
@@ -406,7 +406,7 @@ sqlite3-Datenbankmoduls (dokumentiert in run_demo.sh). Außerdem muss auf macOS
 die Groß-/Kleinschreibung des Pfads auf die echte Schreibweise gebracht werden,
 weil n8ns Dateizugriffs-Schutzvariable den Pfad buchstabengetreu vergleicht.
 
-**Sprechfassung:** "n8n klammert die Kette: Pipeline ausführen, Ergebnis in
+**In 60 Sekunden erklärt:** "n8n klammert die Kette: Pipeline ausführen, Ergebnis in
 Einzelbelege zerlegen, je Beleg über die REST-Schnittstelle eine
 Flowable-Instanz starten. Bewusst reine Orchestrierung ohne Fachlogik. Wichtig
 im Enterprise-Kontext: die fair-code-Lizenz und Enterprise-Funktionen wie
@@ -466,7 +466,7 @@ flowchart TB
 durchschnittlich 25 Minuten pro Fall als zweitgrößten manuellen Block; Demo 2
 setzt genau dort an.
 
-**Sprechfassung:** "Zwei Demos: Erstens ersetzt Claude die Text-Heuristik für
+**In 60 Sekunden erklärt:** "Zwei Demos: Erstens ersetzt Claude die Text-Heuristik für
 Scans ohne XML, aber der Output läuft durch dieselben deterministischen Regeln
 wie jeder Beleg, und der Vertrauenswert bleibt unter der Dunkelbuchungs-Schwelle.
 Zweitens entwirft Claude aus den strukturierten Befunden die Lieferanten-Anfrage

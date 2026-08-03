@@ -2,11 +2,91 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="0; url=poc-walkthrough.html">
-<title>Invoice-to-Approval — Lernseiten</title>
-<link rel="canonical" href="poc-walkthrough.html">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invoice-to-Approval — Rechnungsautomatisierung zum Nachbauen und Verstehen</title>
+<meta property="og:title" content="Invoice-to-Approval — Lern-Portal">
+<meta property="og:description" content="Sechs verzahnte POCs für Rechnungsautomatisierung: Process Mining, E-Rechnung, BPMN/DMN, n8n, LLM mit Human-in-the-Loop. Das Repo erklärt sich selbst.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<style>
+  :root { color-scheme: light dark;
+    --surface:#fcfcfb; --card:#ffffff; --line:#e4e3df;
+    --ink:#1b1b1a; --ink-2:#52514e; --ink-3:#8a897f; --accent:#2a78d6; }
+  @media (prefers-color-scheme: dark) {
+    :root { --surface:#1a1a19; --card:#232322; --line:#3a3936;
+      --ink:#f2f1ec; --ink-2:#c3c2b7; --ink-3:#8a897f; --accent:#3987e5; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--surface); color:var(--ink);
+    font:16px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:880px; margin:0 auto; padding:56px 24px 80px; }
+  h1 { font-size:30px; line-height:1.2; margin:0 0 10px; }
+  .sub { color:var(--ink-2); font-size:17px; margin:0 0 8px; }
+  .these { border-left:3px solid var(--accent); padding:4px 0 4px 14px;
+    color:var(--ink-2); margin:18px 0 26px; }
+  .these b { color:var(--ink); }
+  .cta { display:flex; gap:12px; flex-wrap:wrap; margin:0 0 34px; }
+  .cta a { text-decoration:none; font-weight:600; font-size:14.5px;
+    padding:9px 18px; border-radius:10px; }
+  .cta .primary { background:var(--accent); color:#fff; }
+  .cta .secondary { border:1px solid var(--line); color:var(--ink); }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--ink-3); margin:34px 0 12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+  .tile { display:block; background:var(--card); border:1px solid var(--line);
+    border-radius:12px; padding:14px 16px; text-decoration:none; color:var(--ink); }
+  .tile:hover { border-color:var(--accent); }
+  .tile b { display:block; margin-bottom:3px; }
+  .tile span { color:var(--ink-2); font-size:13.5px; }
+  .tile .mono { font-family:ui-monospace,Menlo,monospace; font-size:13px; }
+  footer { color:var(--ink-3); font-size:13px; margin-top:40px; }
+  footer a { color:var(--accent); }
+</style>
 </head>
 <body>
-<p>Weiter zum <a href="poc-walkthrough.html">POC-Walkthrough</a> …</p>
+<main>
+  <h1>Invoice-to-Approval</h1>
+  <p class="sub">Was passiert zwischen „Rechnung kommt an" und „Rechnung ist
+  freigegeben" und wie viel davon darf man automatisieren? Sechs verzahnte
+  Proof-of-Concepts, gebaut zum Nachvollziehen, Lernen und Verstehen.
+  Synthetische Daten, ehrlich markierte Grenzen, 33 automatisierte Tests.</p>
+  <p class="these"><b>These des Projekts:</b> Das LLM darf extrahieren,
+  formulieren und vorschlagen. Buchen darf es nie. Kontrolle gehört in
+  deterministische Regeln, die Prozess-Engine und den Menschen, gestaffelt
+  nach Risiko.</p>
+  <div class="cta">
+    <a class="primary" href="poc-walkthrough.html">Walkthrough starten</a>
+    <a class="secondary" href="skript-atlas.html">Skript-Atlas</a>
+    <a class="secondary" href="https://github.com/janrummel/invoice-to-approval">Repo auf GitHub</a>
+  </div>
+
+  <h2>Die Konzepte (POC-Walkthrough)</h2>
+  <div class="grid">
+    <a class="tile" href="poc-walkthrough.html"><b>POC-Walkthrough</b>
+      <span>Alle sechs Bausteine: Diagramme, Zahlen, bewusste Grenzen und ein
+      Glossar, das jede Abkürzung erklärt.</span></a>
+    <a class="tile" href="skript-atlas.html"><b>Skript-Atlas (Übersicht)</b>
+      <span>Sechs Skripte auf Code-Ebene, mit Lese-Reihenfolge und
+      Selbsttest-Fragen.</span></a>
+  </div>
+
+  <h2>Der Code, geführt erklärt (eine Seite je Skript)</h2>
+  <div class="grid">
+    <a class="tile" href="atlas-parsers.html"><b class="mono">parsers.py</b>
+      <span>XRechnung (UBL/CII), ZUGFeRD, Text-Fallback, gehärteter XML-Parser</span></a>
+    <a class="tile" href="atlas-validation.html"><b class="mono">validation.py</b>
+      <span>Acht deterministische Prüfregeln, von Summen bis IBAN-Prüfsumme</span></a>
+    <a class="tile" href="atlas-routing.html"><b class="mono">routing.py</b>
+      <span>Risikogestaffeltes Routing: die komplette Punktetabelle</span></a>
+    <a class="tile" href="atlas-run.html"><b class="mono">run.py</b>
+      <span>Der Dirigent: drei Schichten, zwei Ergebnisdateien</span></a>
+    <a class="tile" href="atlas-belegflut.html"><b class="mono">belegflut.py</b>
+      <span>Szenario-Abnahme: 30 Belege gegen eine Soll-Verteilung</span></a>
+    <a class="tile" href="atlas-e2e-smoke.html"><b class="mono">e2e_smoke.py</b>
+      <span>End-to-End-Wächter gegen die laufende Engine, harte Exit-Codes</span></a>
+  </div>
+
+  <footer>MIT-Lizenz · alle Daten synthetisch ·
+    <a href="https://github.com/janrummel/invoice-to-approval">github.com/janrummel/invoice-to-approval</a></footer>
+</main>
 </body>
 </html>

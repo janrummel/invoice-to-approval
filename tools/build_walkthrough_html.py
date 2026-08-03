@@ -104,6 +104,10 @@ def build(src: Path) -> None:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="Invoice-to-Approval: sechs verzahnte POCs für Rechnungsautomatisierung (Process Mining, E-Rechnung, BPMN/DMN, n8n, LLM mit Human-in-the-Loop), als selbst-erklärendes Lern-Portal.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
 <style>
   :root {{
     color-scheme: light dark;
