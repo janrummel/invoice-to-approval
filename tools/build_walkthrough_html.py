@@ -52,7 +52,8 @@ def nav_html(current_stem: str) -> str:
         if stem == "skript-atlas":
             links.append('<span class="sep" aria-hidden="true">·</span>')
     return ('<nav class="topnav"><div class="inner">'
-            '<span class="brand">Invoice-to-Approval · Lernseiten</span>'
+            '<a class="brand" href="index.html">Invoice-to-Approval · Lernseiten</a>'
+            '<a href="index.html">Start</a>'
             + "".join(links) + "</div></nav>")
 
 
@@ -125,7 +126,9 @@ def build(src: Path) -> None:
     border-bottom: 1px solid var(--line); font-size: 13.5px; }}
   .topnav .inner {{ max-width: 1220px; margin: 0 auto; padding: 9px 24px;
     display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: center; }}
-  .topnav .brand {{ font-weight: 650; color: var(--ink); margin-right: 10px; }}
+  .topnav .brand {{ font-weight: 650; color: var(--ink); margin-right: 10px;
+    text-decoration: none; }}
+  .topnav .brand:hover {{ color: var(--accent); background: transparent; }}
   .topnav a {{ color: var(--ink-2); text-decoration: none; padding: 2px 9px;
     border-radius: 999px; }}
   .topnav a:hover {{ background: color-mix(in oklab, var(--ink) 6%, transparent); }}
