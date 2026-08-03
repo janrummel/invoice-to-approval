@@ -7,7 +7,10 @@
 <meta property="og:title" content="Skript-Atlas: die Bausteine auf Code-Ebene">
 <meta property="og:description" content="Invoice-to-Approval: sechs verzahnte POCs für Rechnungsautomatisierung (Process Mining, E-Rechnung, BPMN/DMN, n8n, LLM mit Human-in-the-Loop), als selbst-erklärendes Lern-Portal.">
 <meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://janrummel.github.io/invoice-to-approval/skript-atlas.html">
+<meta property="og:image" content="https://janrummel.github.io/invoice-to-approval/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧾</text></svg>">
 <style>
   :root {
     color-scheme: light dark;
@@ -254,6 +257,11 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
   blockquote { border-left: 3px solid var(--accent); margin: 1em 0;
     padding: 2px 0 2px 14px; color: var(--ink-2); }
   li { margin: .25em 0; }
+  .pagenav { display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; margin-top: 48px; padding-top: 18px;
+    border-top: 1px solid var(--line); font-size: 14px; }
+  .pagenav a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .pagenav .pos { color: var(--ink-3); font-size: 12.5px; }
   @media print {
     body { background: #fff; color: #000; font-size: 12px; }
     .topnav { display: none; }
@@ -329,6 +337,7 @@ ein Beleg durchs System), danach die zwei Test-Werkzeuge <strong>belegflut</stro
 <strong>e2e_smoke</strong> — sie zeigen, wie man dasselbe System von außen prüft. Wer die
 Konzepte davor auffrischen will: <a href="poc-walkthrough.html">POC-Walkthrough</a>,
 Abschnitt POC 02.</p>
+<nav class="pagenav"><a href="poc-walkthrough.html">&larr; POC-Walkthrough</a><span class="pos">Seite 2 / 8</span><a href="atlas-parsers.html">parsers.py &rarr;</a></nav>
 </main>
 <script src="mermaid.min.js"></script>
 <script>

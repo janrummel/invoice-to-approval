@@ -57,6 +57,21 @@ def nav_html(current_stem: str) -> str:
             + "".join(links) + "</div></nav>")
 
 
+def page_nav(current_stem: str) -> str:
+    stems = [s for s, _ in PAGES]
+    if current_stem not in stems:
+        return ""
+    i = stems.index(current_stem)
+    parts = ['<nav class="pagenav">']
+    parts.append(f'<a href="{PAGES[i-1][0]}.html">&larr; {PAGES[i-1][1]}</a>'
+                 if i > 0 else "<span></span>")
+    parts.append(f'<span class="pos">Seite {i+1} / {len(PAGES)}</span>')
+    parts.append(f'<a href="{PAGES[i+1][0]}.html">{PAGES[i+1][1]} &rarr;</a>'
+                 if i < len(stems) - 1 else "<span></span>")
+    parts.append("</nav>")
+    return "".join(parts)
+
+
 def build(src: Path) -> None:
     md = src.read_text()
     m = re.match(r"# (.+)", md)
@@ -108,7 +123,10 @@ def build(src: Path) -> None:
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="Invoice-to-Approval: sechs verzahnte POCs für Rechnungsautomatisierung (Process Mining, E-Rechnung, BPMN/DMN, n8n, LLM mit Human-in-the-Loop), als selbst-erklärendes Lern-Portal.">
 <meta property="og:type" content="website">
-<meta name="twitter:card" content="summary">
+<meta property="og:url" content="https://janrummel.github.io/invoice-to-approval/{src.stem}.html">
+<meta property="og:image" content="https://janrummel.github.io/invoice-to-approval/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧾</text></svg>">
 <style>
   :root {{
     color-scheme: light dark;
@@ -197,6 +215,11 @@ def build(src: Path) -> None:
   blockquote {{ border-left: 3px solid var(--accent); margin: 1em 0;
     padding: 2px 0 2px 14px; color: var(--ink-2); }}
   li {{ margin: .25em 0; }}
+  .pagenav {{ display: flex; justify-content: space-between; align-items: center;
+    gap: 12px; margin-top: 48px; padding-top: 18px;
+    border-top: 1px solid var(--line); font-size: 14px; }}
+  .pagenav a {{ color: var(--accent); text-decoration: none; font-weight: 600; }}
+  .pagenav .pos {{ color: var(--ink-3); font-size: 12.5px; }}
   @media print {{
     body {{ background: #fff; color: #000; font-size: 12px; }}
     .topnav {{ display: none; }}
@@ -211,6 +234,7 @@ def build(src: Path) -> None:
 {nav_html(src.stem)}
 <main>
 {body}
+{page_nav(src.stem)}
 </main>
 <script src="mermaid.min.js"></script>
 <script>

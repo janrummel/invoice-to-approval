@@ -14,6 +14,19 @@ zusammenspielt: E-Rechnung, Prozess-Engine, Entscheidungstabellen, LLM-Einsatz
 mit Kontrolle. Python-Grundkenntnisse reichen; das Lern-Portal unter `docs/`
 erklärt alle Fachbegriffe und den kompletten Code.
 
+**Was du lernst:**
+
+- wie E-Rechnungen (XRechnung UBL/CII, ZUGFeRD) maschinell gelesen und
+  deterministisch validiert werden
+- wie risikogestaffeltes Routing und DMN-Entscheidungstabellen Freigaben
+  steuern — und warum Regel-Reihenfolge Semantik ist
+- wo ein LLM in einen Finance-Prozess darf und wo nicht (Confidence-Gate,
+  Human-in-the-Loop)
+- wie man ein KI-gebautes System absichert: TDD, Mutation-Beweise,
+  adversariale Belege, End-to-End-Smoke
+
+**Zeit:** ~4–6 h für alles; jedes Kapitel einzeln in 20–30 min lesbar.
+
 ```
 POC 01              POC 02                 POC 03                  POC 06
 Process Mining ──▶  Invoice-Pipeline ──▶   Flowable BPMN+DMN ──▶   Freigabe-Cockpit
