@@ -8,6 +8,9 @@ unscharfen Ränder, und ein Live-Cockpit macht die Freigabe bedienbar.
 
 Alle Daten sind **synthetisch** (Seed 42). Kein Kundenbezug, keine Echtdaten.
 
+**Website / Lern-Portal:** <https://janrummel.github.io/invoice-to-approval/>
+(ohne Installation lesbar: alle Bausteine erklärt, Code kommentiert, Cockpit-Demo)
+
 **Für wen:** Entwickler:innen, Architekt:innen und Fachbereichs-Menschen, die
 verstehen wollen, wie moderne Rechnungsautomatisierung (Purchase-to-Pay)
 zusammenspielt: E-Rechnung, Prozess-Engine, Entscheidungstabellen, LLM-Einsatz
@@ -94,15 +97,20 @@ eine Soll-Verteilung). Details: [docs/test-checkliste.md](docs/test-checkliste.m
 
 ## Lern-Portal: das Repo erklärt sich selbst
 
-Unter `docs/` liegt ein verlinktes Lern-Portal (offline lesbar — HTML im
-Browser öffnen, gemeinsame Navigation über alle Seiten):
+Das Lern-Portal ist live unter
+**<https://janrummel.github.io/invoice-to-approval/>** (GitHub Pages, Quelle:
+`docs/`). Dieselben Seiten liegen im Repo und sind offline lesbar, indem man die
+HTML-Dateien in `docs/` im Browser öffnet.
 
-- **[POC-Walkthrough](docs/poc-walkthrough.md)** — Konzepte je Baustein:
-  Diagramme, die Zahlen, bewusste Grenzen, Glossar (~90 Begriffe, alle
-  Abkürzungen erklärt)
-- **[Skript-Atlas](docs/skript-atlas.md)** — sechs Skripte auf Code-Ebene
-  geöffnet: Ablauf-Diagramm, Variablen mit Begründung, der **vollständige
-  Code mit Erklärnotizen in einer zweiten Spalte**, Selbsttest-Fragen
+| Seite | Inhalt |
+|---|---|
+| **[Start / Übersicht](https://janrummel.github.io/invoice-to-approval/)** | Einstieg, Navigation über alle Seiten |
+| **[POC-Walkthrough](https://janrummel.github.io/invoice-to-approval/poc-walkthrough.html)** | Konzepte je Baustein: Diagramme, die Zahlen, bewusste Grenzen, Glossar (~90 Begriffe, alle Abkürzungen erklärt) |
+| **[Skript-Atlas](https://janrummel.github.io/invoice-to-approval/skript-atlas.html)** | sechs Skripte auf Code-Ebene geöffnet: Ablauf-Diagramm, Variablen mit Begründung, der **vollständige Code mit Erklärnotizen in einer zweiten Spalte**, Selbsttest-Fragen |
+| **[Cockpit-Demo](https://janrummel.github.io/invoice-to-approval/demo-cockpit.html)** | das Freigabe-Cockpit als Demo-Ansicht |
+
+Markdown-Quellen im Repo: [poc-walkthrough.md](docs/poc-walkthrough.md),
+[skript-atlas.md](docs/skript-atlas.md).
 
 ## Bewusste Grenzen
 
