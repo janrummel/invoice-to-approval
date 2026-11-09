@@ -144,6 +144,10 @@ benannten produktiven Ausbauschritten.
 und dirigiert. Das Testfundament (33 Tests, Mutation-geprüft) ist die Antwort
 darauf, wie man KI-gebautem Code trauen kann.
 
+## Veröffentlichung
+
+https://janrummel.github.io/invoice-to-approval/ liefert GitHub Pages direkt aus Branch `main`, Ordner `/docs`. Kein Build-Schritt: die Dateien sind statisches HTML, CSS und JavaScript.
+
 ## Lizenz
 
 MIT — siehe [LICENSE](LICENSE).
